@@ -1,0 +1,40 @@
+{
+    "description": "ESP32, ESP8266 WiFi Connection manager with fallback web ConfigPortal", 
+    "repository": {
+        "url": "https://github.com/khoih-prog/ESP_WiFiManager", 
+        "type": "git"
+    }, 
+    "platforms": [
+        "espressif32", 
+        "espressif8266"
+    ], 
+    "export": {
+        "exclude": [
+            "extras", 
+            "docs", 
+            "tests", 
+            "test", 
+            "*.doxyfile", 
+            "*.pdf"
+        ], 
+        "include": null
+    }, 
+    "authors": [
+        {
+            "maintainer": true, 
+            "name": "Khoi Hoang", 
+            "url": null, 
+            "email": "khoih.prog@gmail.com"
+        }
+    ], 
+    "keywords": [
+        "communication"
+    ], 
+    "id": 6915, 
+    "name": "ESP_WiFiManager", 
+    "frameworks": [
+        "arduino"
+    ], 
+    "version": "1.0.7", 
+    "homepage": null
+}

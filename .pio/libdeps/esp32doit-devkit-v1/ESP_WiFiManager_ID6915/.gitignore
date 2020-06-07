@@ -30,4 +30,6 @@
 *.exe
 *.out
 *.app
-/.pio/build
+
+# Visual Studio folder and files
+.vs

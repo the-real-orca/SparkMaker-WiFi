@@ -1,0 +1,12 @@
+{
+    "captivePortal": {
+        "enabled": true,
+        "timeout": 300
+    },
+    "hostname": "SparkMaker",
+    "knownAP": {
+        "ssid": "ssid",
+        "pwd": "***"
+    },
+    "connectionTimeout": 5
+}

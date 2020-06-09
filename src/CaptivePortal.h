@@ -19,7 +19,6 @@ class CaptivePortal
   public:
     // captive portal core functions
     static void setup();
-    static void setup(const JsonObject& config);
     static void begin();
     static void loop();
 

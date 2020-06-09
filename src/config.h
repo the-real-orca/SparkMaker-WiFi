@@ -5,7 +5,7 @@
 extern DynamicJsonDocument configJson;
 extern const JsonObject JsonObjectNull;
 
-JsonObject loadConfig(const String& filename = "/config.json");
-bool saveConfig(const JsonObject& config = JsonObjectNull, const String& filename = "/config.json");
+bool loadConfig(DynamicJsonDocument& configJson, const String& filename = "/config.json");
+bool saveConfig(const DynamicJsonDocument& config, const String& filename = "/config.json");
 
 #endif // _CONFIG_h

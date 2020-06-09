@@ -2,15 +2,11 @@
 // http://www.instructables.com/id/Using-ESP8266-SPIFFS/
 #include <Arduino.h>
 #include <SPIFFS.h>
-#include <ArduinoJson.h>
-
 #include "config.h"
 
-const uint16_t maxConfigSize = 2048;
-DynamicJsonDocument configJson(maxConfigSize);
 const JsonObject JsonObjectNull;
 
-JsonObject loadConfig(const String& filename)
+bool loadConfig(DynamicJsonDocument& configJson, const String& filename)
 {
   Serial.println("loadConfig:");
   configJson.clear();
@@ -20,15 +16,16 @@ JsonObject loadConfig(const String& filename)
   if (!configFile)
   {
     Serial.println("Failed to open config file");
-    return configJson.as<JsonObject>();
+    return false;
   }
 
+  size_t maxConfigSize = configJson.capacity();
   size_t size = configFile.size();
   if (size > maxConfigSize)
   {
     Serial.println("Config file size is too large");
     configFile.close();
-    return configJson.as<JsonObject>();
+    return false;
   }
 
   // parse JSON
@@ -38,6 +35,7 @@ JsonObject loadConfig(const String& filename)
   {
     Serial.println("Failed to parse config file");
     configJson.clear();
+    return false;
   }
 
   // TODO
@@ -45,10 +43,10 @@ JsonObject loadConfig(const String& filename)
   serializeJsonPretty(configJson, Serial);
   Serial.println();
 
-  return configJson.as<JsonObject>();
+  return true;
 }
 
-bool saveConfig(const JsonObject& config, const String& filename)
+bool saveConfig(const DynamicJsonDocument& config, const String& filename)
 {
   Serial.println("saveConfig:");
 

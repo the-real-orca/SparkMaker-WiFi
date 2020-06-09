@@ -2,6 +2,17 @@
 
 #include "CaptivePortal.h"
 
+#ifdef ESP8266
+extern "C"
+{
+#include "user_interface.h"
+}
+static inline uint32_t ESP_getChipId() { return ESP.getChipId(); }
+#else		//ESP32
+#include <esp_wifi.h>
+static inline uint32_t ESP_getChipId() { return (uint32_t)ESP.getEfuseMac(); }
+#endif
+
 // DNS _httpServer
 static const byte DNS_PORT = 53;
 DNSServer _dnsServer;
@@ -11,21 +22,35 @@ static const byte HTTP_PORT = 80;
 WebServer _httpServer(HTTP_PORT);
 
 // JSON
-DynamicJsonDocument jsonDoc(2048);
+static DynamicJsonDocument jsonTemp(2048);
+static DynamicJsonDocument config(1024);
 
-// AP network configuration
-IPAddress apIP(192, 168, 4, 1); // TODO
-IPAddress netMask(255, 255, 255, 0); // TODO
-
-
-String _hostname = "ESP_Captive";
+// Captive Portal defaults
+static struct {
+  uint16_t connectionTimeout = 5;
+  String hostname = "ESP-" + String(ESP_getChipId());
+} defaultConfig;
 
 /**
- * handle captive portal requests
+ * handle Captive Portal web page
+ */
+static void handlePortal()
+{
+  Serial.print("send captive portal page ... ");
+
+  // TODO
+
+  _httpServer.send(200, "text/html", "<h1>TODO</h1>");
+  _httpServer.client().stop();
+  Serial.println("OK");
+}
+
+/**
+ * test for captive portal requests
  * 
  * @return: true if handled
  */
-static boolean handleCaptiveRequest()
+static boolean isCaptiveRequest()
 {
     // test for local requests
     String host = _httpServer.hostHeader();
@@ -41,18 +66,25 @@ static boolean handleCaptiveRequest()
       return false;    
     }
 
-    if ( host == _hostname + ".local" )
+    if ( host.endsWith(".local") || host.endsWith(".home") )
     {
       // request to local host name
       return false;    
     }
 
+    return true;
+}
+
+/**
+ * handle captive portal requests
+ */
+static void handleCaptiveRequest()
+{
     // redirect
     Serial.println("request captured and redirected");
-    _httpServer.sendHeader("Location", "http://" + _hostname + ".local/portal", true);
+    _httpServer.sendHeader("Location", "http://" + config["hostname"].as<String>() + ".local/c/portal", true);
     _httpServer.send(302, "text/html", "");
     _httpServer.client().stop();    
-    return true;
 }
 
 /**
@@ -61,8 +93,11 @@ static boolean handleCaptiveRequest()
 static void handleGenericHTTP()
 {
     // test for captive portal request
-    if ( handleCaptiveRequest() )
-        return;
+    if ( isCaptiveRequest() )
+    {
+      handleCaptiveRequest();
+      return;
+    }
 
     // send not found page
     Serial.print("handleNotFound: ");
@@ -75,7 +110,7 @@ static void handleGenericHTTP()
     _httpServer.setContentLength(CONTENT_LENGTH_UNKNOWN);
     // HTML Content
     static String html;
-    html = "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>" + _hostname + "</title></head><body>";
+    html = "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>" + config["hostname"].as<String>() + "</title></head><body>";
     html += "<i>" + _httpServer.uri() + "</i> not found";
     html += "</body></html>";
     _httpServer.send(404, "text/html", html);
@@ -104,12 +139,12 @@ static void handleWifiScan()
 {
   Serial.print("WiFi scan: ... ");
 
-  jsonDoc.clear();
+  jsonTemp.clear();
   WiFi.scanDelete();
   int n = WiFi.scanNetworks(false, false); //WiFi.scanNetworks(async, show_hidden)
   for (int i = 0; i < n; i++) 
   {
-    JsonObject network = jsonDoc.createNestedObject();
+    JsonObject network = jsonTemp.createNestedObject();
     network["ssid"] = WiFi.SSID(i);
     network["rssi"] = WiFi.RSSI(i);
     network["encryption"] = encryptionTypeNames[WiFi.encryptionType(i)];
@@ -117,7 +152,7 @@ static void handleWifiScan()
 
   // send json data
   String content;
-  serializeJson(jsonDoc, content);
+  serializeJson(jsonTemp, content);
   _httpServer.send(200, "application/json", content);
   _httpServer.client().stop();  
   Serial.println(content);
@@ -125,77 +160,109 @@ static void handleWifiScan()
 
 
 /**
- * add AP to known APs
+ * add AP to known networks
  */
 static void handleWifiAdd()
 {
-// TODO
+  String ssid = _httpServer.arg("ssid");
+  String pwd = _httpServer.arg("pwd");
+  Serial.print("add '" + ssid + "' to known networks list: ... ");
+
+  auto credentials = config["credentials"].as<JsonObject>();
+  credentials[ssid] = pwd;
+
+  _httpServer.send(200, "application/json", "{\"response\": \"OK\"}");
+  _httpServer.client().stop();
+  Serial.println("OK");
+}
+
+/**
+ * remove AP from known networks
+ */
+static void handleWifiDel()
+{
+  String ssid = _httpServer.arg("ssid");
+  Serial.print("remove '" + ssid + "' from known networks list: ... ");
+
+  config["credentials"].remove(ssid);
+
+  _httpServer.send(200, "application/json", "{\"response\": \"OK\"}");
+  _httpServer.client().stop();
+  Serial.println("OK");
 }
 
 void CaptivePortal::setup()
 {
-  JsonObject config = loadConfig();
-  CaptivePortal::setup(config);
-}
-
-void CaptivePortal::setup(const JsonObject& config)
-{
-    // copy config
-    _hostname = config["hostname"] | _hostname;
+  loadConfig(config);
+ 
+    // default config
+    if ( !config["hostname"] )
+      config["hostname"] = defaultConfig.hostname;
+    if ( !config["connectionTimeout"] )
+      config["connectionTimeout"] | defaultConfig.connectionTimeout;
 
     // init WiFi
-WiFi.printDiag(Serial); // TODO
-Serial.setDebugOutput(true);
     WiFi.mode(WIFI_MODE_APSTA);
     WiFi.softAPdisconnect(true);
     WiFi.setAutoReconnect(false);
     WiFi.persistent(false);
-    WiFi.setHostname(_hostname.c_str());
+    WiFi.setHostname(config["hostname"]);
 
     // create WiFi AP
     Serial.print("Start WiFi AP ... ");
-    WiFi.disconnect();
-    WiFi.softAPConfig(apIP, apIP, netMask);
-    WiFi.softAP(_hostname.c_str());
+// TODO    WiFi.softAPConfig(apIP, apIP, netMask);
+    WiFi.softAP(config["hostname"]);
     Serial.println("OK");
 
     // connect as Client
-    String ssid = config["knownAP"]["ssid"];
-    String pwd = config["knownAP"]["pwd"];
-    uint16_t connectionTimeout = config["connectionTimeout"] | 5;
-    Serial.print("Connect to "); Serial.print(ssid); Serial.print(" ... ");
-    WiFi.begin(ssid.c_str(), pwd.c_str());
-    // wait for connection
-    for(int16_t i = connectionTimeout * 10; (i > 0) &&  (WiFi.status() != WL_CONNECTED); i--) {
-        delay(100);
+    // scan for networks and connect to strongest one we have credentials
+    uint16_t connectionTimeout = config["connectionTimeout"];
+    WiFi.disconnect();
+    WiFi.scanDelete();
+    int n = WiFi.scanNetworks(false, false);
+    for (int j = 0; j < n && WiFi.status() != WL_CONNECTED; j++) 
+    {
+      String ssid = WiFi.SSID(j);
+      if ( config["credentials"].containsKey(ssid) )
+      {
+        String pwd = config["credentials"][ssid];
+        Serial.print("Connect to "); Serial.print(ssid); Serial.print(" ... ");
+        WiFi.begin(ssid.c_str(), pwd.c_str());
+        // wait for connection
+        for(int16_t i = connectionTimeout * 10; (i > 0) &&  (WiFi.status() != WL_CONNECTED); i--) {
+            delay(100);
+        }
+      }
     }
+
     if ( WiFi.status() == WL_CONNECTED)
         Serial.println("OK");
     else
         Serial.println("Failed");
 
+    Serial.print("IP Address: ");
+    Serial.print(WiFi.softAPIP()); Serial.print(", "); Serial.println(WiFi.localIP());
+
     // redirecting all the domains to the ESP
     Serial.print("Start DNS ... ");
     _dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-    _dnsServer.start(DNS_PORT, "*", apIP);
+    _dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
     Serial.println("OK");
-
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.softAPIP());
-    Serial.println(WiFi.localIP());
 
     // setup HTTP server
     Serial.print("Start WebServer ... ");
-    _httpServer.on("/c/scan", handleWifiScan);
-    _httpServer.on("/c/add", handleWifiAdd);
-// TODO    _httpServer.on("/c/del", handleWifiDel);
+    _httpServer.on("/c/portal", handlePortal);            // handle captive portal
+    _httpServer.on("/c/scan", handleWifiScan);            // scan active WiFi networks
+    _httpServer.on("/c/add", handleWifiAdd);              // add credential for WiFi network
+    _httpServer.on("/c/del", handleWifiDel);              // remove known WiFi network
 
-//    _httpServer.on("/generate_204", handleRoot); // Android captive portal. Maybe not needed. Might be handled by notFound handler.
-//    _httpServer.on("/fwlink", handleRoot);       // Microsoft captive portal.
+   _httpServer.on("/generate_204", handleCaptiveRequest); // Android captive portal.
+   _httpServer.on("/fwlink", handleCaptiveRequest);       // Microsoft captive portal.
 
 
     // generic not found
     _httpServer.onNotFound(handleGenericHTTP);
+
 }
 
 

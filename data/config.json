@@ -4,9 +4,9 @@
         "timeout": 300
     },
     "hostname": "SparkMaker",
-    "knownAP": {
-        "ssid": "ssid",
-        "pwd": "***"
+    "credentials": {
+        "ssid": "pwd",
+        "openNetwork": ""
     },
     "connectionTimeout": 5
 }

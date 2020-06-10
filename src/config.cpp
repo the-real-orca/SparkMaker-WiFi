@@ -50,12 +50,6 @@ bool saveConfig(const DynamicJsonDocument& config, const String& filename)
 {
   Serial.println("saveConfig:");
 
-  if ( !config.isNull() )
-  {
-    configJson.clear();
-    configJson = config;
-  }
-
   // file handling
   File configFile = SPIFFS.open(filename, FILE_WRITE);
   if (!configFile)
@@ -65,7 +59,7 @@ bool saveConfig(const DynamicJsonDocument& config, const String& filename)
   }
 
   // Serialize JSON to file
-  size_t size = serializeJsonPretty(configJson, configFile);
+  size_t size = serializeJsonPretty(config, configFile);
   configFile.close();
   if (size == 0)
   {
@@ -75,7 +69,7 @@ bool saveConfig(const DynamicJsonDocument& config, const String& filename)
 
   // TODO
   Serial.print("JSON save: ");
-  serializeJsonPretty(configJson, Serial);
+  serializeJsonPretty(config, Serial);
   Serial.println();
 
   return true;

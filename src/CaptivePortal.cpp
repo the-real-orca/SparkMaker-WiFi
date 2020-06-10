@@ -8,7 +8,7 @@ extern "C"
 #include "user_interface.h"
 }
 static inline uint32_t ESP_getChipId() { return ESP.getChipId(); }
-#else		//ESP32
+#else //ESP32
 #include <esp_wifi.h>
 static inline uint32_t ESP_getChipId() { return (uint32_t)ESP.getEfuseMac(); }
 #endif
@@ -26,13 +26,13 @@ static DynamicJsonDocument jsonTemp(2048);
 static DynamicJsonDocument config(1024);
 
 // Captive Portal defaults
-const static struct {
+const static struct
+{
   uint16_t connectionTimeout = 5;
-  uint8_t softAP_IP[4] = {192,168,4,1};
-  uint8_t subnet[4] = {255,255,255,0};
+  uint8_t softAP_IP[4] = {192, 168, 4, 1};
+  uint8_t subnet[4] = {255, 255, 255, 0};
   String hostname = "ESP-" + String(ESP_getChipId());
 } defaultConfig;
-
 
 /**
  * handle Captive Portal web page
@@ -55,27 +55,27 @@ static void handlePortal()
  */
 static boolean isCaptiveRequest()
 {
-    // test for local requests
-    String host = _httpServer.hostHeader();
-    if ( host == WiFi.softAPIP().toString() )
-    {
-      // request to access point IP
-      return false;    
-    }
+  // test for local requests
+  String host = _httpServer.hostHeader();
+  if (host == WiFi.softAPIP().toString())
+  {
+    // request to access point IP
+    return false;
+  }
 
-    if ( host == WiFi.localIP().toString() )
-    {
-      // request to client IP
-      return false;    
-    }
+  if (host == WiFi.localIP().toString())
+  {
+    // request to client IP
+    return false;
+  }
 
-    if ( host.endsWith(".local") || host.endsWith(".home") )
-    {
-      // request to local host name
-      return false;    
-    }
+  if (host.endsWith(".local") || host.endsWith(".home"))
+  {
+    // request to local host name
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
 /**
@@ -83,11 +83,11 @@ static boolean isCaptiveRequest()
  */
 static void handleCaptiveRequest()
 {
-    // redirect
-    Serial.println("request captured and redirected");
-    _httpServer.sendHeader("Location", "http://" + config["hostname"].as<String>() + ".local/c/portal", true);
-    _httpServer.send(302, "text/html", "");
-    _httpServer.client().stop();    
+  // redirect
+  Serial.println("request captured and redirected");
+  _httpServer.sendHeader("Location", "http://" + config["hostname"].as<String>() + ".local/c/portal", true);
+  _httpServer.send(302, "text/html", "");
+  _httpServer.client().stop();
 }
 
 /**
@@ -95,35 +95,36 @@ static void handleCaptiveRequest()
  */
 static void handleGenericHTTP()
 {
-    // test for captive portal request
-    if ( isCaptiveRequest() )
-    {
-      handleCaptiveRequest();
-      return;
-    }
+  // test for captive portal request
+  if (isCaptiveRequest())
+  {
+    handleCaptiveRequest();
+    return;
+  }
 
-    // send not found page
-    Serial.print("handleNotFound: ");
-    Serial.print(_httpServer.hostHeader()); Serial.println(_httpServer.uri());
+  // send not found page
+  Serial.print("handleNotFound: ");
+  Serial.print(_httpServer.hostHeader());
+  Serial.println(_httpServer.uri());
 
-    // HTML Header
-    _httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    _httpServer.sendHeader("Pragma", "no-cache");
-    _httpServer.sendHeader("Expires", "-1");
-    _httpServer.setContentLength(CONTENT_LENGTH_UNKNOWN);
-    // HTML Content
-    static String html;
-    html = "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>" + config["hostname"].as<String>() + "</title></head><body>";
-    html += "<i>" + _httpServer.uri() + "</i> not found";
-    html += "</body></html>";
-    _httpServer.send(404, "text/html", html);
-    _httpServer.client().stop();
+  // HTML Header
+  _httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  _httpServer.sendHeader("Pragma", "no-cache");
+  _httpServer.sendHeader("Expires", "-1");
+  _httpServer.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  // HTML Content
+  static String html;
+  html = "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>" + config["hostname"].as<String>() + "</title></head><body>";
+  html += "<i>" + _httpServer.uri() + "</i> not found";
+  html += "</body></html>";
+  _httpServer.send(404, "text/html", html);
+  _httpServer.client().stop();
 }
 
 /**
  * string names for WiFi encryption
  */
-const char* encryptionTypeNames[] = {
+const char *encryptionTypeNames[] = {
     "OPEN",
     "WEP",
     "WPA",
@@ -132,8 +133,7 @@ const char* encryptionTypeNames[] = {
     "WPA2 Enterprise",
     "WPA3",
     "WPA3 Enterprise",
-    "WIFI_AUTH_MAX"
-};
+    "WIFI_AUTH_MAX"};
 
 /**
  * perform WiFi scan and send detected networks
@@ -145,7 +145,7 @@ static void handleWifiScan()
   jsonTemp.clear();
   WiFi.scanDelete();
   int n = WiFi.scanNetworks(false, false); //WiFi.scanNetworks(async, show_hidden)
-  for (int i = 0; i < n; i++) 
+  for (int i = 0; i < n; i++)
   {
     JsonObject network = jsonTemp.createNestedObject();
     network["ssid"] = WiFi.SSID(i);
@@ -157,10 +157,9 @@ static void handleWifiScan()
   String content;
   serializeJson(jsonTemp, content);
   _httpServer.send(200, "application/json", content);
-  _httpServer.client().stop();  
+  _httpServer.client().stop();
   Serial.println(content);
 }
-
 
 /**
  * add AP to known networks
@@ -173,10 +172,12 @@ static void handleWifiAdd()
 
   auto credentials = config["credentials"].as<JsonObject>();
   credentials[ssid] = pwd;
+  saveConfig(config);
 
   _httpServer.send(200, "application/json", "{\"response\": \"OK\"}");
   _httpServer.client().stop();
   Serial.println("OK");
+
 }
 
 /**
@@ -188,6 +189,7 @@ static void handleWifiDel()
   Serial.print("remove '" + ssid + "' from known networks list: ... ");
 
   config["credentials"].remove(ssid);
+  saveConfig(config);
 
   _httpServer.send(200, "application/json", "{\"response\": \"OK\"}");
   _httpServer.client().stop();
@@ -197,103 +199,116 @@ static void handleWifiDel()
 void CaptivePortal::setup()
 {
   loadConfig(config);
- 
-    // process config
-    if ( !config["hostname"] )
-      config["hostname"] = defaultConfig.hostname;
-    if ( !config["connectionTimeout"] )
-      config["connectionTimeout"] | defaultConfig.connectionTimeout;
-    IPAddress softAP_IP(defaultConfig.softAP_IP);
-    if ( config["captivePortal"]["ip"].is<const char*>() )
-      softAP_IP.fromString(config["captivePortal"]["ip"].as<const char *>());
-    IPAddress subnet(defaultConfig.subnet);
-    if ( config["captivePortal"]["subnet"].is<const char*>() )
-      subnet.fromString(config["captivePortal"]["subnet"].as<const char *>());
 
-    // init WiFi
-    WiFi.mode(WIFI_MODE_APSTA);
-    WiFi.softAPdisconnect(true);
-    WiFi.setAutoReconnect(false);
-    WiFi.persistent(false);
-    WiFi.setHostname(config["hostname"]);
+  // process config
+  if (!config["hostname"])
+    config["hostname"] = defaultConfig.hostname;
+  if (!config["connectionTimeout"])
+    config["connectionTimeout"] | defaultConfig.connectionTimeout;
+  IPAddress softAP_IP(defaultConfig.softAP_IP);
+  if (config["captivePortal"]["ip"].is<const char *>())
+    softAP_IP.fromString(config["captivePortal"]["ip"].as<const char *>());
+  IPAddress subnet(defaultConfig.subnet);
+  if (config["captivePortal"]["subnet"].is<const char *>())
+    subnet.fromString(config["captivePortal"]["subnet"].as<const char *>());
 
-    // create WiFi AP
-    Serial.print("Start WiFi AP ... ");
-    WiFi.softAPConfig(softAP_IP, softAP_IP, subnet);
-    WiFi.softAP(config["hostname"]);
-    Serial.println("OK");
+  // init WiFi
+  WiFi.mode(WIFI_MODE_APSTA);
+  WiFi.softAPdisconnect(true);
+  WiFi.setAutoReconnect(false);
+  WiFi.persistent(false);
+  WiFi.setHostname(config["hostname"]);
 
-    // connect as Client
-    // scan for networks and connect to strongest one we have credentials
-    uint16_t connectionTimeout = config["connectionTimeout"];
-    WiFi.disconnect();
-    WiFi.scanDelete();
-    int n = WiFi.scanNetworks(false, false);
-    for (int j = 0; j < n && WiFi.status() != WL_CONNECTED; j++) 
+  // create WiFi AP
+  Serial.print("Start WiFi AP ... ");
+  WiFi.softAPConfig(softAP_IP, softAP_IP, subnet);
+  WiFi.softAP(config["hostname"]);
+  Serial.println("OK");
+
+  // connect as Client
+  // scan for networks and connect to strongest one we have credentials
+  uint16_t connectionTimeout = config["connectionTimeout"];
+  WiFi.disconnect();
+  WiFi.scanDelete();
+  int n = WiFi.scanNetworks(false, false);
+  for (int j = 0; j < n && WiFi.status() != WL_CONNECTED; j++)
+  {
+    String ssid = WiFi.SSID(j);
+    if (config["credentials"].containsKey(ssid))
     {
-      String ssid = WiFi.SSID(j);
-      if ( config["credentials"].containsKey(ssid) )
+      String pwd = config["credentials"][ssid];
+      Serial.print("Connect to ");
+      Serial.print(ssid);
+      Serial.print(" ... ");
+      WiFi.begin(ssid.c_str(), pwd.c_str());
+      // wait for connection
+      for (int16_t i = connectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
       {
-        String pwd = config["credentials"][ssid];
-        Serial.print("Connect to "); Serial.print(ssid); Serial.print(" ... ");
-        WiFi.begin(ssid.c_str(), pwd.c_str());
-        // wait for connection
-        for(int16_t i = connectionTimeout * 10; (i > 0) &&  (WiFi.status() != WL_CONNECTED); i--) {
-            delay(100);
-        }
+        delay(100);
       }
     }
+  }
 
-    if ( WiFi.status() == WL_CONNECTED)
-        Serial.println("OK");
-    else
-        Serial.println("Failed");
-
-    Serial.print("IP Address: ");
-    Serial.print(WiFi.softAPIP()); Serial.print(", "); Serial.println(WiFi.localIP());
-
-    // redirecting all the domains to the ESP
-    Serial.print("Start DNS ... ");
-    _dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-    _dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+  if (WiFi.status() == WL_CONNECTED)
     Serial.println("OK");
+  else
+    Serial.println("Failed");
 
-    // setup HTTP server
-    Serial.print("Start WebServer ... ");
-    _httpServer.on("/c/portal", handlePortal);            // handle captive portal
-    _httpServer.on("/c/scan", handleWifiScan);            // scan active WiFi networks
-    _httpServer.on("/c/add", handleWifiAdd);              // add credential for WiFi network
-    _httpServer.on("/c/del", handleWifiDel);              // remove known WiFi network
+  Serial.print("IP Address: ");
+  Serial.print(WiFi.softAPIP());
+  Serial.print(", ");
+  Serial.println(WiFi.localIP());
 
-   _httpServer.on("/generate_204", handleCaptiveRequest); // Android captive portal.
-   _httpServer.on("/fwlink", handleCaptiveRequest);       // Microsoft captive portal.
+  // redirecting all the domains to the ESP
+  Serial.print("Start DNS ... ");
+  _dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+  _dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+  Serial.println("OK");
 
+  // enable mDNS
+  Serial.print("Start mDNS ... ");
+  if( MDNS.begin(config["hostname"]) )
+  {
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("OK");
+  } else
+  {
+    Serial.println("Failed !");
+  }
 
-    // generic not found
-    _httpServer.onNotFound(handleGenericHTTP);
+  // setup HTTP server
+  Serial.print("Start WebServer ... ");
+  _httpServer.on("/c/portal", handlePortal); // handle captive portal
+  _httpServer.on("/c/scan", handleWifiScan); // scan active WiFi networks
+  _httpServer.on("/c/add", handleWifiAdd);   // add credential for WiFi network
+  _httpServer.on("/c/del", handleWifiDel);   // remove known WiFi network
 
+  _httpServer.on("/generate_204", handleCaptiveRequest); // Android captive portal.
+  _httpServer.on("/fwlink", handleCaptiveRequest);       // Microsoft captive portal.
+
+  // generic not found
+  _httpServer.onNotFound(handleGenericHTTP);
 }
-
 
 void CaptivePortal::begin()
 {
-    // start _httpServer
-    _httpServer.begin();
+  // start _httpServer
+  _httpServer.begin();
 }
 
 void CaptivePortal::loop()
 {
-    //DNS
-    _dnsServer.processNextRequest();
+  //DNS
+  _dnsServer.processNextRequest();
 
-    //HTTP
-    _httpServer.handleClient();
+  //HTTP
+  _httpServer.handleClient();
 }
 
 /*******************************************************************************************************************************
  * WebServer wrapper functions
  */
-WebServer& CaptivePortal::getHttpServer()
+WebServer &CaptivePortal::getHttpServer()
 {
   return _httpServer;
 }
@@ -305,21 +320,21 @@ void CaptivePortal::on(const String &uri, HTTPMethod method, WebServer::THandler
 {
   _httpServer.on(uri, method, handler);
 }
-void CaptivePortal::on(const String &uri, HTTPMethod method, WebServer::THandlerFunction handler, WebServer::THandlerFunction ufn) 
+void CaptivePortal::on(const String &uri, HTTPMethod method, WebServer::THandlerFunction handler, WebServer::THandlerFunction ufn)
 {
   _httpServer.on(uri, method, handler, ufn);
 }
-void CaptivePortal::sendHeader(const String& name, const String& value, bool first)
+void CaptivePortal::sendHeader(const String &name, const String &value, bool first)
 {
   _httpServer.sendHeader(name, value, first);
 }
-void CaptivePortal::sendFinal(int code, char* content_type, const String& content)
+void CaptivePortal::sendFinal(int code, char *content_type, const String &content)
 {
   _httpServer.send(code, content_type, content);
-  _httpServer.client().stop();  
+  _httpServer.client().stop();
 }
-void CaptivePortal::sendFinal(int code, const String& content_type, const String& content)
+void CaptivePortal::sendFinal(int code, const String &content_type, const String &content)
 {
   _httpServer.send(code, content_type, content);
-  _httpServer.client().stop();  
+  _httpServer.client().stop();
 }

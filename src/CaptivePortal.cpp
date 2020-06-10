@@ -26,10 +26,13 @@ static DynamicJsonDocument jsonTemp(2048);
 static DynamicJsonDocument config(1024);
 
 // Captive Portal defaults
-static struct {
+const static struct {
   uint16_t connectionTimeout = 5;
+  uint8_t softAP_IP[4] = {192,168,4,1};
+  uint8_t subnet[4] = {255,255,255,0};
   String hostname = "ESP-" + String(ESP_getChipId());
 } defaultConfig;
+
 
 /**
  * handle Captive Portal web page
@@ -195,11 +198,17 @@ void CaptivePortal::setup()
 {
   loadConfig(config);
  
-    // default config
+    // process config
     if ( !config["hostname"] )
       config["hostname"] = defaultConfig.hostname;
     if ( !config["connectionTimeout"] )
       config["connectionTimeout"] | defaultConfig.connectionTimeout;
+    IPAddress softAP_IP(defaultConfig.softAP_IP);
+    if ( config["captivePortal"]["ip"].is<const char*>() )
+      softAP_IP.fromString(config["captivePortal"]["ip"].as<const char *>());
+    IPAddress subnet(defaultConfig.subnet);
+    if ( config["captivePortal"]["subnet"].is<const char*>() )
+      subnet.fromString(config["captivePortal"]["subnet"].as<const char *>());
 
     // init WiFi
     WiFi.mode(WIFI_MODE_APSTA);
@@ -210,7 +219,7 @@ void CaptivePortal::setup()
 
     // create WiFi AP
     Serial.print("Start WiFi AP ... ");
-// TODO    WiFi.softAPConfig(apIP, apIP, netMask);
+    WiFi.softAPConfig(softAP_IP, softAP_IP, subnet);
     WiFi.softAP(config["hostname"]);
     Serial.println("OK");
 

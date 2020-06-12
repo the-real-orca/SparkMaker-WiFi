@@ -1,10 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <script src="js/vue.js"></script>
     <title>Captive Portal</title>
+
 </head>
+
 <body>
-    
+<div id="app">
+    <h1>Captive Portal</h1>
+    <h1>{{hostname}}</h1>
+    <h2>Networks</h2>
+    <div v-for="ap in availableNetworks">
+        <div class="network available" :class="{known: ap.known, connected: ap.connected}" @click="selectNetwork(ap)" >
+            <span class="ssid">{{ap.ssid}}</span>
+            <span class="encryption" v-if="ap.encryption && ap.encryption != 'OPEN'" >&#x1F512;</span>
+            <span class="rssi">{{ap.rssi}}</span>
+            <span v-if="ap.known">
+                <span class="bookmark">&starf;</span>
+                <div class="del" @click.stop="deleteNetwork(ap)">X</div>
+            </span>
+        </div>
+    </div>
+    <span v-if="knownNetworks.length>0">not available</span>
+    <div v-for="ap in knownNetworks"  @click="selectNetwork(ap)" >
+            <div class="network known" >
+                <span class="ssid">{{ap.ssid}}</span>
+                <span class="encryption" v-if="ap.encryption && ap.encryption != 'OPEN'" >&#x1F512;</span>
+                <span v-if="ap.known">
+                    <span class="bookmark">&starf;</span>
+                    <div class="del" @click.stop="deleteNetwork(ap)">X</div>
+                </span>
+            </div>
+        </div>
+
+    <h2>Add Network</h2>
+    <form @submit.prevent="addNetwork">
+        <label>SSID:</label> <input id="ssid" type="text" name="ssid" autocomplete="on" v-model="form.ssid"> <br>
+        <label>Password:</label> <input id="pwd" type="password" name="pwd" autocomplete="on" v-model="form.pwd"> <br>
+        <button :disabled="!form.ssid">Connect</button>
+    </form>
+
+</div>
+
+<script>
+        var app = new Vue({
+          el: '#app',
+          data: {
+            hostname: 'Hello Vue!',
+            networks: [
+                {
+                    ssid: 'test',
+                    rssi: -49,
+                    encryption: 'WAP',
+                    known: true,
+                    connected: true
+                },
+                {
+                    ssid: 'open net',
+                    rssi: -59,
+                    encryption: 'OPEN',
+                    known: false
+                },
+                {
+                    ssid: 'net',
+                    rssi: -89,
+                    encryption: 'WEP',
+                    known: true
+                },
+                {
+                    ssid: 'far away',
+                    encryption: true,
+                    known: true
+                }                             
+            ],
+            form: {
+                ssid: "",
+                pwd: ""
+            }
+          },
+          computed: {
+            availableNetworks() {
+                return this.networks.filter(item => (item.rssi < 0));
+            },
+            knownNetworks() {
+                return this.networks.filter(item => (!item.rssi && item.known));
+            }
+          },
+          methods: {
+            selectNetwork(ap) {
+                console.log("select: " + ap.ssid);
+                this.form.ssid = ap.ssid;
+                document.getElementById("pwd").focus();
+            },
+            addNetwork() {
+                console.log("add: " + this.form.ssid);
+                // TODO send update
+            },            
+            deleteNetwork(del) {
+                console.log("delete: " + del.ssid);
+                if ( confirm("Remove '" + del.ssid + "'?") ) {
+                    // TODO send update
+                }
+            }            
+          }
+        })    
+</script>
 </body>
 </html>

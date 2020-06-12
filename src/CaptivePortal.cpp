@@ -22,7 +22,7 @@ static const byte HTTP_PORT = 80;
 WebServer _httpServer(HTTP_PORT);
 
 // JSON
-static DynamicJsonDocument jsonTemp(2048);
+static DynamicJsonDocument networks(2048);
 static DynamicJsonDocument config(1024);
 
 // Captive Portal defaults
@@ -141,21 +141,53 @@ const char *encryptionTypeNames[] = {
 static void handleWifiScan()
 {
   Serial.print("WiFi scan: ... ");
+Serial.print("connected WiFi"); Serial.print(WiFi.SSID());
 
-  jsonTemp.clear();
+  // scan available networks
+  networks.clear();
   WiFi.scanDelete();
   int n = WiFi.scanNetworks(false, false); //WiFi.scanNetworks(async, show_hidden)
   for (int i = 0; i < n; i++)
   {
-    JsonObject network = jsonTemp.createNestedObject();
-    network["ssid"] = WiFi.SSID(i);
-    network["rssi"] = WiFi.RSSI(i);
-    network["encryption"] = encryptionTypeNames[WiFi.encryptionType(i)];
+    JsonObject ap = networks.createNestedObject();
+    ap["ssid"] = WiFi.SSID(i);
+    ap["rssi"] = WiFi.RSSI(i);
+    ap["encrypted"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+
+    // check for currently connected
+    if ( WiFi.SSID(i) == WiFi.SSID() )
+      ap["connected"] = true;
+  }
+
+  // augment known networks
+  auto credentials = config["credentials"].as<JsonObject>();
+  for (const auto& kv : credentials) 
+  {
+    // search in networks
+    bool found = false;
+    for (auto ap : networks.as<JsonArray>())
+    {
+      if ( kv.key() == ap["ssid"] )
+      {
+        // we have credentials for this network
+        found = true;
+        ap["known"] = true;
+        break;
+      }
+    }
+    if ( !found )
+    {
+      // add to network list
+      JsonObject newNet = networks.createNestedObject();
+      newNet["ssid"] = kv.key();
+      newNet["encrypted"] = (kv.value().as<String>().length() > 0);
+      newNet["known"] = true;
+    }
   }
 
   // send json data
   String content;
-  serializeJson(jsonTemp, content);
+  serializeJsonPretty(networks, content);
   _httpServer.send(200, "application/json", content);
   _httpServer.client().stop();
   Serial.println(content);
@@ -168,16 +200,15 @@ static void handleWifiAdd()
 {
   String ssid = _httpServer.arg("ssid");
   String pwd = _httpServer.arg("pwd");
-  Serial.print("add '" + ssid + "' to known networks list: ... ");
+  Serial.print("add '" + ssid + "' to known networks list");
 
   auto credentials = config["credentials"].as<JsonObject>();
   credentials[ssid] = pwd;
   saveConfig(config);
 
-  _httpServer.send(200, "application/json", "{\"response\": \"OK\"}");
-  _httpServer.client().stop();
-  Serial.println("OK");
+  // TODO connect to WiFi
 
+  handleWifiScan();
 }
 
 /**
@@ -191,9 +222,42 @@ static void handleWifiDel()
   config["credentials"].remove(ssid);
   saveConfig(config);
 
-  _httpServer.send(200, "application/json", "{\"response\": \"OK\"}");
-  _httpServer.client().stop();
-  Serial.println("OK");
+  handleWifiScan();
+}
+
+
+/**
+ * connect as WiFi Client
+ * use strongest available network in known credentials list
+ */
+void connectWiFiClient()
+{
+  // scan for networks and connect to strongest one we have credentials
+  uint16_t connectionTimeout = config["connectionTimeout"];
+  WiFi.disconnect();
+  WiFi.scanDelete();
+  int n = WiFi.scanNetworks(false, false);
+  for (int j = 0; j < n && WiFi.status() != WL_CONNECTED; j++)
+  {
+    String ssid = WiFi.SSID(j);
+    if (config["credentials"].containsKey(ssid))
+    {
+      String pwd = config["credentials"][ssid];
+      Serial.print("Connect to ");
+      Serial.print(ssid);
+      Serial.print(" ... ");
+      WiFi.begin(ssid.c_str(), pwd.c_str());
+      // wait for connection
+      for (int16_t i = connectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
+      {
+        delay(100);
+      }
+    }
+  }
+  if (WiFi.status() == WL_CONNECTED)
+    Serial.println("OK");
+  else
+    Serial.println("Failed");
 }
 
 void CaptivePortal::setup()
@@ -225,45 +289,19 @@ void CaptivePortal::setup()
   WiFi.softAP(config["hostname"]);
   Serial.println("OK");
 
-  // connect as Client
-  // scan for networks and connect to strongest one we have credentials
-  uint16_t connectionTimeout = config["connectionTimeout"];
-  WiFi.disconnect();
-  WiFi.scanDelete();
-  int n = WiFi.scanNetworks(false, false);
-  for (int j = 0; j < n && WiFi.status() != WL_CONNECTED; j++)
-  {
-    String ssid = WiFi.SSID(j);
-    if (config["credentials"].containsKey(ssid))
-    {
-      String pwd = config["credentials"][ssid];
-      Serial.print("Connect to ");
-      Serial.print(ssid);
-      Serial.print(" ... ");
-      WiFi.begin(ssid.c_str(), pwd.c_str());
-      // wait for connection
-      for (int16_t i = connectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
-      {
-        delay(100);
-      }
-    }
-  }
-
-  if (WiFi.status() == WL_CONNECTED)
-    Serial.println("OK");
-  else
-    Serial.println("Failed");
-
-  Serial.print("IP Address: ");
-  Serial.print(WiFi.softAPIP());
-  Serial.print(", ");
-  Serial.println(WiFi.localIP());
-
   // redirecting all the domains to the ESP
   Serial.print("Start DNS ... ");
   _dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
   _dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
   Serial.println("OK");
+
+  // connect as WiFi Client
+  connectWiFiClient();
+  
+  Serial.print("IP Address: ");
+  Serial.print(WiFi.softAPIP());
+  Serial.print(", ");
+  Serial.println(WiFi.localIP());
 
   // enable mDNS
   Serial.print("Start mDNS ... ");

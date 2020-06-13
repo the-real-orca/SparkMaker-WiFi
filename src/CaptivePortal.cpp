@@ -141,7 +141,6 @@ const char *encryptionTypeNames[] = {
 static void handleWifiScan()
 {
   Serial.print("WiFi scan: ... ");
-Serial.print("connected WiFi"); Serial.print(WiFi.SSID());
 
   // scan available networks
   networks.clear();
@@ -188,6 +187,7 @@ Serial.print("connected WiFi"); Serial.print(WiFi.SSID());
   // send json data
   String content;
   serializeJsonPretty(networks, content);
+  _httpServer.sendHeader("Access-Control-Allow-Origin", "*");
   _httpServer.send(200, "application/json", content);
   _httpServer.client().stop();
   Serial.println(content);
@@ -208,6 +208,7 @@ static void handleWifiAdd()
 
   // TODO connect to WiFi
 
+  // return network list
   handleWifiScan();
 }
 
@@ -222,6 +223,7 @@ static void handleWifiDel()
   config["credentials"].remove(ssid);
   saveConfig(config);
 
+  // return network list
   handleWifiScan();
 }
 

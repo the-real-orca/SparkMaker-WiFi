@@ -11,13 +11,13 @@
 
 <body>
 <div id="app">
-    <h1>Captive Portal</h1>
+    <h3>Captive Portal</h3>
     <h1>{{hostname}}</h1>
     <h2>Networks</h2>
     <div v-for="ap in availableNetworks">
         <div class="network available" :class="{known: ap.known, connected: ap.connected}" @click="selectNetwork(ap)" >
             <span class="ssid">{{ap.ssid}}</span>
-            <span class="encryption" v-if="ap.encryption && ap.encryption != 'OPEN'" >&#x1F512;</span>
+            <span class="encryption" v-if="ap.encrypted" >&#x1F512;</span>
             <span class="rssi">{{ap.rssi}}</span>
             <span v-if="ap.known">
                 <span class="bookmark">&starf;</span>
@@ -29,7 +29,7 @@
     <div v-for="ap in knownNetworks"  @click="selectNetwork(ap)" >
             <div class="network known" >
                 <span class="ssid">{{ap.ssid}}</span>
-                <span class="encryption" v-if="ap.encryption && ap.encryption != 'OPEN'" >&#x1F512;</span>
+                <span class="encryption" v-if="ap.encrypted" >&#x1F512;</span>
                 <span v-if="ap.known">
                     <span class="bookmark">&starf;</span>
                     <div class="del" @click.stop="deleteNetwork(ap)">X</div>
@@ -44,6 +44,10 @@
         <button :disabled="!form.ssid">Connect</button>
     </form>
 
+    <div class="modal" v-show="wait">
+            <div class="background"></div>
+            <div class="spinner">wait ...</div>
+    </div>
 </div>
 
 <script>
@@ -51,36 +55,12 @@
           el: '#app',
           data: {
             hostname: 'Hello Vue!',
-            networks: [
-                {
-                    ssid: 'test',
-                    rssi: -49,
-                    encryption: 'WAP',
-                    known: true,
-                    connected: true
-                },
-                {
-                    ssid: 'open net',
-                    rssi: -59,
-                    encryption: 'OPEN',
-                    known: false
-                },
-                {
-                    ssid: 'net',
-                    rssi: -89,
-                    encryption: 'WEP',
-                    known: true
-                },
-                {
-                    ssid: 'far away',
-                    encryption: true,
-                    known: true
-                }                             
-            ],
+            networks: [],
             form: {
                 ssid: "",
                 pwd: ""
-            }
+            },
+            wait: true
           },
           computed: {
             availableNetworks() {
@@ -90,6 +70,15 @@
                 return this.networks.filter(item => (!item.rssi && item.known));
             }
           },
+          mounted() {
+                fetch("http://192.168.0.202/c/scan")
+                    .then(response => response.json())
+                    .then(json => {
+                        // update network list
+                        this.networks = json;
+                        this.wait = false;
+                })
+          },
           methods: {
             selectNetwork(ap) {
                 console.log("select: " + ap.ssid);
@@ -97,13 +86,32 @@
                 document.getElementById("pwd").focus();
             },
             addNetwork() {
-                console.log("add: " + this.form.ssid);
-                // TODO send update
+                // send new credentials
+                this.wait = true;
+                var formData = new FormData();
+                formData.append("ssid", this.form.ssid);
+                formData.append("pwd", this.form.pwd);
+                fetch("http://192.168.0.202/c/add", {method: 'POST', body: formData})
+                    .then(response => response.json())
+                    .then(json => {
+                        // update network list
+                        this.networks = json;
+                        this.wait = false;
+                })
             },            
             deleteNetwork(del) {
-                console.log("delete: " + del.ssid);
+                // remove from known networks
                 if ( confirm("Remove '" + del.ssid + "'?") ) {
-                    // TODO send update
+                    this.wait = true;
+                    var formData = new FormData();
+                    formData.append("ssid", del.ssid);
+                    fetch("http://192.168.0.202/c/del", {method: 'POST', body: formData})
+                        .then(response => response.json())
+                        .then(json => {
+                            // update network list
+                            this.networks = json;
+                            this.wait = false;
+                        })
                 }
             }            
           }

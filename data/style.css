@@ -3,6 +3,7 @@ body {
     width: 30em;
     font-family: Arial, sans-serif;
     position: relative;
+    cursor: default;
 }
 
 .modal {
@@ -67,11 +68,11 @@ h2 {
     border: lightgray solid 1px;
     border-radius: 0.3em;
     margin: 0.5em;
-    padding: 0.75em 1em;
+    padding: 0.75em 1.5em;
     background: #f8f8f8;
 }
-.network>span {
-    margin: 0.3em;
+.network > span {
+    margin: 0 0.1em;
 }
 
 .available {
@@ -95,6 +96,9 @@ h2 {
 }
 
 .bookmark {
+    display: inline-block;
+    position: absolute;
+    left:1em;    
 }
 
 .del {
@@ -108,6 +112,19 @@ h2 {
     text-align: center;
     font-size: 120%;
     cursor: pointer;    
+}
+
+.showPwd {
+    display: inline-block;
+    position: absolute;
+    color: gray;
+    font-weight: bold;
+    right: 1em;
+    padding: 0.1em;
+    width: 2em;
+    text-align: center;
+    font-size: 175%;    
+    cursor: pointer;
 }
 
 label {

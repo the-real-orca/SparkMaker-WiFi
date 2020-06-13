@@ -11,36 +11,37 @@
 
 <body>
 <div id="app">
-    <h3>Captive Portal</h3>
-    <h1>{{hostname}}</h1>
-    <h2>Networks</h2>
+    <h1>{{title}}</h1>
+    <h2>WiFi Networks</h2>
     <div v-for="ap in availableNetworks">
         <div class="network available" :class="{known: ap.known, connected: ap.connected}" @click="selectNetwork(ap)" >
+            <div class="bookmark" v-if="ap.known">&starf;</div>
             <span class="ssid">{{ap.ssid}}</span>
             <span class="encryption" v-if="ap.encrypted" >&#x1F512;</span>
             <span class="rssi">{{ap.rssi}}</span>
-            <span v-if="ap.known">
-                <span class="bookmark">&starf;</span>
-                <div class="del" @click.stop="deleteNetwork(ap)">X</div>
-            </span>
+            <div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
         </div>
     </div>
-    <span v-if="knownNetworks.length>0">not available</span>
+    <span v-if="knownNetworks.length>0"><i>not in reach</i></span>
     <div v-for="ap in knownNetworks"  @click="selectNetwork(ap)" >
-            <div class="network known" >
-                <span class="ssid">{{ap.ssid}}</span>
-                <span class="encryption" v-if="ap.encrypted" >&#x1F512;</span>
-                <span v-if="ap.known">
-                    <span class="bookmark">&starf;</span>
-                    <div class="del" @click.stop="deleteNetwork(ap)">X</div>
-                </span>
-            </div>
+        <div class="network known" >
+            <div class="bookmark" v-if="ap.known">&starf;</div>
+            <span class="ssid">{{ap.ssid}}</span>
+            <span class="encryption" v-if="ap.encrypted" >&#x1F512;</span>
+            <div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
         </div>
+    </div>
+    <br>
+    <button @click.stop="scanNetworks">Scan</button>
 
     <h2>Add Network</h2>
     <form @submit.prevent="addNetwork">
-        <label>SSID:</label> <input id="ssid" type="text" name="ssid" autocomplete="on" v-model="form.ssid"> <br>
-        <label>Password:</label> <input id="pwd" type="password" name="pwd" autocomplete="on" v-model="form.pwd"> <br>
+        <div>
+            <label>SSID:</label> <input id="ssid" type="text" name="ssid" autocomplete="on" v-model="form.ssid">
+        </div>
+        <div>
+            <label>Password:</label> <input id="pwd" :type="form.showPwd ? 'text' : 'password'" name="pwd" autocomplete="on" v-model="form.pwd"><div class="showPwd" @click.stop="form.showPwd = !form.showPwd">&#x1f441;</div>
+        </div>
         <button :disabled="!form.ssid">Connect</button>
     </form>
 
@@ -54,11 +55,12 @@
         var app = new Vue({
           el: '#app',
           data: {
-            hostname: 'Hello Vue!',
+            title: 'SparkMaker - Captive',
             networks: [],
             form: {
                 ssid: "",
-                pwd: ""
+                pwd: "",
+                showPwd: false
             },
             wait: true
           },
@@ -80,9 +82,20 @@
                 })
           },
           methods: {
+            scanNetworks() {
+                this.wait = true;
+                fetch("http://192.168.0.202/c/scan")
+                    .then(response => response.json())
+                    .then(json => {
+                        // update network list
+                        this.networks = json;
+                        this.wait = false;
+                })
+            },
             selectNetwork(ap) {
                 console.log("select: " + ap.ssid);
                 this.form.ssid = ap.ssid;
+                this.form.pwd = "";
                 document.getElementById("pwd").focus();
             },
             addNetwork() {
@@ -98,6 +111,8 @@
                         this.networks = json;
                         this.wait = false;
                 })
+                this.form.ssid = "";
+                this.form.pwd = "";
             },            
             deleteNetwork(del) {
                 // remove from known networks
@@ -113,7 +128,7 @@
                             this.wait = false;
                         })
                 }
-            }            
+            }      
           }
         })    
 </script>

@@ -22,8 +22,9 @@ static const byte HTTP_PORT = 80;
 WebServer _httpServer(HTTP_PORT);
 
 // JSON
-static DynamicJsonDocument networks(2048);
+static DynamicJsonDocument networks(1024);
 static DynamicJsonDocument config(1024);
+static DynamicJsonDocument tempJson(1024);
 
 // Captive Portal defaults
 const static struct
@@ -32,20 +33,72 @@ const static struct
   uint8_t softAP_IP[4] = {192, 168, 4, 1};
   uint8_t subnet[4] = {255, 255, 255, 0};
   String hostname = "ESP-" + String(ESP_getChipId());
+  String portalPath = "portal.html";
 } defaultConfig;
 
+
 /**
- * handle Captive Portal web page
+ * connect as WiFi Client
+ * use strongest available network in known credentials list
  */
-static void handlePortal()
+void connectWiFiClient()
 {
-  Serial.print("send captive portal page ... ");
+  // scan for networks and connect to strongest one we have credentials
+  uint16_t connectionTimeout = config["connectionTimeout"];
+  WiFi.disconnect();
+  WiFi.scanDelete();
+  int n = WiFi.scanNetworks(false, false);
+  for (int j = 0; j < n && WiFi.status() != WL_CONNECTED; j++)
+  {
+    String ssid = WiFi.SSID(j);
+    if (config["credentials"].containsKey(ssid))
+    {
+      String pwd = config["credentials"][ssid];
+      Serial.print("Connect to ");
+      Serial.print(ssid);
+      Serial.print(" ... ");
+      WiFi.begin(ssid.c_str(), pwd.c_str());
+      // wait for connection
+      for (int16_t i = connectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
+      {
+        delay(100);
+      }
+    }
+  }
+  if (WiFi.status() == WL_CONNECTED)
+    Serial.println("OK");
+  else
+    Serial.println("Failed");
+}
 
-  // TODO
 
-  _httpServer.send(200, "text/html", "<h1>TODO</h1>");
-  _httpServer.client().stop();
-  Serial.println("OK");
+/**
+ * connect as WiFi Client
+ * try given credentials, use strongest available network in known credentials list as fallback
+ */
+void connectWiFiClient(String ssid, String pwd)
+{
+  WiFi.disconnect();
+  Serial.print("Connect to ");
+  Serial.print(ssid);
+  Serial.print(" ... ");
+  WiFi.begin(ssid.c_str(), pwd.c_str());
+  // wait for connection
+  uint16_t connectionTimeout = config["connectionTimeout"];  
+  for (int16_t i = connectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
+  {
+    delay(100);
+  }
+
+  if (WiFi.status() == WL_CONNECTED)
+    Serial.println("OK");
+  else
+  {
+    Serial.println("Failed");
+
+    // fallback to known networks
+    connectWiFiClient();
+  }
 }
 
 /**
@@ -85,7 +138,8 @@ static void handleCaptiveRequest()
 {
   // redirect
   Serial.println("request captured and redirected");
-  _httpServer.sendHeader("Location", "http://" + config["hostname"].as<String>() + ".local/c/portal", true);
+  String portalPath = config["captivePortal"]["path"] | defaultConfig.portalPath;
+  _httpServer.sendHeader("Location", "http://" + config["hostname"].as<String>() + ".local/" + portalPath, true);
   _httpServer.send(302, "text/html", "");
   _httpServer.client().stop();
 }
@@ -101,6 +155,9 @@ static void handleGenericHTTP()
     handleCaptiveRequest();
     return;
   }
+
+  // load from SPIFFS
+  // TODO
 
   // send not found page
   Serial.print("handleNotFound: ");
@@ -118,6 +175,30 @@ static void handleGenericHTTP()
   html += "<i>" + _httpServer.uri() + "</i> not found";
   html += "</body></html>";
   _httpServer.send(404, "text/html", html);
+  _httpServer.client().stop();
+}
+
+/**
+ * handle info request
+ */
+static void handleInfo()
+{
+  Serial.println("send info");
+
+  // scan available networks
+  tempJson.clear();
+  tempJson["name"] = config["hostname"];
+  auto portal = tempJson.createNestedObject("captivePortal");
+  portal["ssid"] = WiFi.SSID();
+  portal["ip"] = WiFi.softAPIP().toString();
+  auto client = tempJson.createNestedObject("client");
+  client["ip"] = WiFi.localIP().toString();
+
+  // send json data
+  String content;
+  serializeJsonPretty(tempJson, content);
+  _httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+  _httpServer.send(200, "application/json", content);
   _httpServer.client().stop();
 }
 
@@ -190,7 +271,7 @@ static void handleWifiScan()
   _httpServer.sendHeader("Access-Control-Allow-Origin", "*");
   _httpServer.send(200, "application/json", content);
   _httpServer.client().stop();
-  Serial.println(content);
+  Serial.println(content); // TODO
 }
 
 /**
@@ -206,10 +287,17 @@ static void handleWifiAdd()
   credentials[ssid] = pwd;
   saveConfig(config);
 
-  // TODO connect to WiFi
+  // send reply
+  _httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+  _httpServer.send(200, "application/json", "{\"status\": \"OK\"}");
+  _httpServer.client().stop();
 
-  // return network list
-  handleWifiScan();
+  // connect to WiFi
+  if ( ssid != WiFi.SSID() )
+  {
+    delay(100);  
+    connectWiFiClient(ssid, pwd);
+  }
 }
 
 /**
@@ -220,47 +308,24 @@ static void handleWifiDel()
   String ssid = _httpServer.arg("ssid");
   Serial.print("remove '" + ssid + "' from known networks list: ... ");
 
+  bool reconnect = (ssid == WiFi.SSID());
+
   config["credentials"].remove(ssid);
   saveConfig(config);
 
-  // return network list
-  handleWifiScan();
-}
+  // send reply
+  _httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+  _httpServer.send(200, "application/json", "{\"status\": \"OK\"}");
+  _httpServer.client().stop();
 
-
-/**
- * connect as WiFi Client
- * use strongest available network in known credentials list
- */
-void connectWiFiClient()
-{
-  // scan for networks and connect to strongest one we have credentials
-  uint16_t connectionTimeout = config["connectionTimeout"];
-  WiFi.disconnect();
-  WiFi.scanDelete();
-  int n = WiFi.scanNetworks(false, false);
-  for (int j = 0; j < n && WiFi.status() != WL_CONNECTED; j++)
+  // connect to WiFi
+  if ( reconnect )
   {
-    String ssid = WiFi.SSID(j);
-    if (config["credentials"].containsKey(ssid))
-    {
-      String pwd = config["credentials"][ssid];
-      Serial.print("Connect to ");
-      Serial.print(ssid);
-      Serial.print(" ... ");
-      WiFi.begin(ssid.c_str(), pwd.c_str());
-      // wait for connection
-      for (int16_t i = connectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
-      {
-        delay(100);
-      }
-    }
+    delay(100);
+    connectWiFiClient();
   }
-  if (WiFi.status() == WL_CONNECTED)
-    Serial.println("OK");
-  else
-    Serial.println("Failed");
 }
+
 
 void CaptivePortal::setup()
 {
@@ -318,7 +383,7 @@ void CaptivePortal::setup()
 
   // setup HTTP server
   Serial.print("Start WebServer ... ");
-  _httpServer.on("/c/portal", handlePortal); // handle captive portal
+  _httpServer.on("/c/info", handleInfo);     // send status info
   _httpServer.on("/c/scan", handleWifiScan); // scan active WiFi networks
   _httpServer.on("/c/add", handleWifiAdd);   // add credential for WiFi network
   _httpServer.on("/c/del", handleWifiDel);   // remove known WiFi network

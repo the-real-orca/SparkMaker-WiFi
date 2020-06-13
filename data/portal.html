@@ -22,7 +22,7 @@
             <div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
         </div>
     </div>
-    <span v-if="knownNetworks.length>0"><i>not in reach</i></span>
+    <span v-if="knownNetworks.length>0"><i>not in range</i></span>
     <div v-for="ap in knownNetworks"  @click="selectNetwork(ap)" >
         <div class="network known" >
             <div class="bookmark" v-if="ap.known">&starf;</div>
@@ -55,7 +55,7 @@
         var app = new Vue({
           el: '#app',
           data: {
-            title: 'SparkMaker - Captive',
+            title: 'Captive Portal',
             networks: [],
             form: {
                 ssid: "",
@@ -73,13 +73,21 @@
             }
           },
           mounted() {
+                fetch("http://192.168.0.202/c/info")
+                    .then(response => response.json())
+                    .then(json => {
+                        if ( json.name )
+                            this.title = json.name;
+                    })              
+                    .catch(err => {})
                 fetch("http://192.168.0.202/c/scan")
                     .then(response => response.json())
                     .then(json => {
                         // update network list
                         this.networks = json;
                         this.wait = false;
-                })
+                    })
+                    .catch(err => {})
           },
           methods: {
             scanNetworks() {
@@ -90,7 +98,8 @@
                         // update network list
                         this.networks = json;
                         this.wait = false;
-                })
+                    })
+                    .catch(err => {})
             },
             selectNetwork(ap) {
                 console.log("select: " + ap.ssid);
@@ -105,12 +114,22 @@
                 formData.append("ssid", this.form.ssid);
                 formData.append("pwd", this.form.pwd);
                 fetch("http://192.168.0.202/c/add", {method: 'POST', body: formData})
-                    .then(response => response.json())
-                    .then(json => {
-                        // update network list
-                        this.networks = json;
-                        this.wait = false;
-                })
+                    .then(resp => {
+                        // delay next fetch and give ESP a chance to switch network
+                        var _this = this;
+                        setTimeout(function() {
+                            fetch("http://192.168.0.202/c/scan")
+                                .then(response => response.json())
+                                .then(json => {
+                                    // update network list
+                                    _this.networks = json;
+                                    _this.wait = false;
+                                })
+                                .catch(err => {});
+                            }, 1000);
+                    })
+                    .catch(err => {});
+
                 this.form.ssid = "";
                 this.form.pwd = "";
             },            
@@ -121,12 +140,21 @@
                     var formData = new FormData();
                     formData.append("ssid", del.ssid);
                     fetch("http://192.168.0.202/c/del", {method: 'POST', body: formData})
-                        .then(response => response.json())
-                        .then(json => {
-                            // update network list
-                            this.networks = json;
-                            this.wait = false;
+                        .then(resp => {
+                            // delay next fetch and give ESP a chance to switch network
+                            var _this = this;
+                            setTimeout(function() {
+                                fetch("http://192.168.0.202/c/scan")
+                                    .then(response => response.json())
+                                    .then(json => {
+                                        // update network list
+                                        _this.networks = json;
+                                        _this.wait = false;
+                                    })
+                                    .catch(err => {});
+                                }, 1000);
                         })
+                        .catch(err => {});
                 }
             }      
           }

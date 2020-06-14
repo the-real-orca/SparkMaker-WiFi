@@ -73,14 +73,14 @@
             }
           },
           mounted() {
-                fetch("http://192.168.0.202/c/info")
+                fetch("/c/info")
                     .then(response => response.json())
                     .then(json => {
                         if ( json.name )
                             this.title = json.name;
                     })              
                     .catch(err => {})
-                fetch("http://192.168.0.202/c/scan")
+                fetch("/c/scan")
                     .then(response => response.json())
                     .then(json => {
                         // update network list
@@ -92,7 +92,7 @@
           methods: {
             scanNetworks() {
                 this.wait = true;
-                fetch("http://192.168.0.202/c/scan")
+                fetch("/c/scan")
                     .then(response => response.json())
                     .then(json => {
                         // update network list
@@ -113,12 +113,12 @@
                 var formData = new FormData();
                 formData.append("ssid", this.form.ssid);
                 formData.append("pwd", this.form.pwd);
-                fetch("http://192.168.0.202/c/add", {method: 'POST', body: formData})
+                fetch("/c/add", {method: 'POST', body: formData})
                     .then(resp => {
                         // delay next fetch and give ESP a chance to switch network
                         var _this = this;
                         setTimeout(function() {
-                            fetch("http://192.168.0.202/c/scan")
+                            fetch("/c/scan")
                                 .then(response => response.json())
                                 .then(json => {
                                     // update network list
@@ -139,12 +139,12 @@
                     this.wait = true;
                     var formData = new FormData();
                     formData.append("ssid", del.ssid);
-                    fetch("http://192.168.0.202/c/del", {method: 'POST', body: formData})
+                    fetch("/c/del", {method: 'POST', body: formData})
                         .then(resp => {
                             // delay next fetch and give ESP a chance to switch network
                             var _this = this;
                             setTimeout(function() {
-                                fetch("http://192.168.0.202/c/scan")
+                                fetch("/c/scan")
                                     .then(response => response.json())
                                     .then(json => {
                                         // update network list

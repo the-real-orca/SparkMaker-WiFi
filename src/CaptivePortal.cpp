@@ -13,6 +13,8 @@ static inline uint32_t ESP_getChipId() { return ESP.getChipId(); }
 static inline uint32_t ESP_getChipId() { return (uint32_t)ESP.getEfuseMac(); }
 #endif
 
+#include <SPIFFS.h>
+
 // DNS _httpServer
 static const byte DNS_PORT = 53;
 DNSServer _dnsServer;
@@ -145,6 +147,71 @@ static void handleCaptiveRequest()
 }
 
 /**
+ * get MIME type from filename
+ */
+static String getContentType(String filename) 
+{
+  if(filename.endsWith(".htm")) return "text/html";
+  if(filename.endsWith(".html")) return "text/html";
+  if(filename.endsWith(".css")) return "text/css";
+  if(filename.endsWith(".js")) return "application/javascript";
+  if(filename.endsWith(".png")) return "image/png";
+  if(filename.endsWith(".gif")) return "image/gif";
+  if(filename.endsWith(".jpg")) return "image/jpeg";
+  if(filename.endsWith(".ico")) return "image/x-icon";
+  if(filename.endsWith(".xml")) return "text/xml";
+  if(filename.endsWith(".pdf")) return "application/x-pdf";
+  if(filename.endsWith(".zip")) return "application/x-zip";
+  if(filename.endsWith(".gz")) return "application/x-gzip";
+  return "text/plain";
+}
+
+/**
+ * send static file
+ * 
+ * @return true if file exist and was sent
+ */
+static bool handleFile(String path)
+{
+  Serial.println("handleFile: " + path);
+
+  // security check
+  if ( path.indexOf("..") >= 0 )
+    return false;
+
+  // prepend web server folder
+  path = "/public" + path;
+
+  // add default page
+  if ( path.endsWith("/") )
+    path += "index.html";                                
+
+  // MIME type
+  String contentType = getContentType(path);
+  
+  String pathCompressed = path + ".gz";
+  bool found = SPIFFS.exists(path);
+  bool foundCompressed = SPIFFS.exists(pathCompressed);
+  if ( found || foundCompressed )
+  {  
+    // use compressed version if exist
+    if ( foundCompressed )
+      path = pathCompressed;
+
+    // send file
+    File file = SPIFFS.open(path, "r");
+    _httpServer.streamFile(file, contentType);
+    file.close();
+
+Serial.println(String("Sent file: ") + path);
+    return true;
+  }
+
+Serial.println(String("\tFile Not Found: ") + path);
+  return false;
+}
+
+/**
  * handle HTTP generic request
  */
 static void handleGenericHTTP()
@@ -157,7 +224,8 @@ static void handleGenericHTTP()
   }
 
   // load from SPIFFS
-  // TODO
+  if ( handleFile(_httpServer.uri()) )
+    return;
 
   // send not found page
   Serial.print("handleNotFound: ");
@@ -189,9 +257,10 @@ static void handleInfo()
   tempJson.clear();
   tempJson["name"] = config["hostname"];
   auto portal = tempJson.createNestedObject("captivePortal");
-  portal["ssid"] = WiFi.SSID();
+  portal["ssid"] = config["hostname"];
   portal["ip"] = WiFi.softAPIP().toString();
   auto client = tempJson.createNestedObject("client");
+  client["ssid"] = WiFi.SSID();
   client["ip"] = WiFi.localIP().toString();
 
   // send json data
@@ -326,9 +395,51 @@ static void handleWifiDel()
   }
 }
 
+void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
+{
+    Serial.printf("Listing directory: %s\r\n", dirname);
+
+    File root = fs.open(dirname);
+    if (!root)
+    {
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if (!root.isDirectory())
+    {
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while (file)
+    {
+        if (file.isDirectory())
+        {
+            Serial.print("  DIR : ");
+            Serial.println(file.name());
+            if (levels)
+            {
+                listDir(fs, file.name(), levels - 1);
+            }
+        }
+        else
+        {
+            Serial.print("  FILE: ");
+            Serial.print(file.name());
+            Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+        }
+        file = root.openNextFile();
+    }
+}
 
 void CaptivePortal::setup()
 {
+  // file system
+  SPIFFS.begin(true); // format filesystem if failed
+  listDir(SPIFFS, "/", 0);
+
   loadConfig(config);
 
   // process config

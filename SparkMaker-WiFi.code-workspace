@@ -11,7 +11,10 @@
 		},
 		"python.pythonPath": "${workspaceFolder}\\mDNS_python\\Scripts\\python.exe",
 		"files.associations": {
-			"system_error": "cpp"
+			"system_error": "cpp",
+			"initializer_list": "cpp",
+			"xstring": "cpp",
+			"xutility": "cpp"
 		}
 	}
 }

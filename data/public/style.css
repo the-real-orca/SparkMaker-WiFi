@@ -1,5 +1,5 @@
 body {
-    margin: auto;
+    margin: 3em auto;
     width: 30em;
     font-family: Arial, sans-serif;
     position: relative;
@@ -41,16 +41,21 @@ body {
     margin: 15% auto;  
     animation: sk-scaleout 2.0s infinite ease-in-out;
 }
-
-
 @keyframes sk-scaleout {
     0% { transform: scale(0.3); }
     100% { transform: scale(1.4); opacity: 0.2; }
 }
 
+[contenteditable]::after {
+    content: "\1F589";
+    opacity: 0.5;
+    position: absolute;
+    padding-left: 1em;
+    font-size: 66%;
+}
+
 h1 {
     text-align: center;
-    margin-top: 1.5em;
 }
 
 h2 {

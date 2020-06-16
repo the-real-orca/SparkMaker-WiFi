@@ -6,12 +6,11 @@
     <link rel="stylesheet" href="style.css">
     <script src="js/vue.js"></script>
     <title>Captive Portal</title>
-
 </head>
 
 <body>
 <div id="app">
-    <h1>{{title}}</h1>
+    <h1 contenteditable v-text="title" @blur="updateTitle" @keydown.enter="updateTitle"></h1>
     <h2>WiFi Networks</h2>
     <div v-for="ap in availableNetworks">
         <div class="network available" :class="{known: ap.known, connected: ap.connected}" @click="selectNetwork(ap)" >
@@ -31,7 +30,6 @@
             <div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
         </div>
     </div>
-    <br>
     <button @click.stop="scanNetworks">Scan</button>
 
     <h2>Add Network</h2>
@@ -55,14 +53,14 @@
         var app = new Vue({
           el: '#app',
           data: {
-            title: 'Captive Portal',
+            title: 'Device Name',
             networks: [],
             form: {
                 ssid: "",
                 pwd: "",
                 showPwd: false
             },
-            wait: true
+            wait: false // TODO true
           },
           computed: {
             availableNetworks() {
@@ -90,6 +88,15 @@
                     .catch(err => {})
           },
           methods: {
+            updateTitle(event) {
+                this.title = event.target.innerText.replace(/[^\w\d_\-\+ ]/g, '').trim();
+                event.target.blur();
+                var formData = new FormData();
+                formData.append("hostname", this.title);
+                fetch("/c/hostname", {method: 'POST', body: formData})
+                    .then(resp => {})
+                    .catch(err => {});                
+            },
             scanNetworks() {
                 this.wait = true;
                 fetch("/c/scan")

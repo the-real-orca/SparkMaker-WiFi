@@ -38,6 +38,60 @@ const static struct
   String portalPath = "portal.html";
 } defaultConfig;
 
+/**
+ * sanity check for strings
+ */
+String sanity(const String _str)
+{
+  String str = _str;
+  str.replace("\"", "");
+  str.replace("'", "");
+  str.replace("\\", "");
+
+  return str;
+}
+
+/**
+ * start captive portal AP
+ */
+void startCaptiveAP()
+{
+  Serial.print("Start WiFi AP: " + config["hostname"].as<String>() + " ... ");
+
+  IPAddress softAP_IP(defaultConfig.softAP_IP);
+  if (config["captivePortal"]["ip"].is<const char *>())
+    softAP_IP.fromString(config["captivePortal"]["ip"].as<const char *>());
+  IPAddress subnet(defaultConfig.subnet);
+  if (config["captivePortal"]["subnet"].is<const char *>())
+    subnet.fromString(config["captivePortal"]["subnet"].as<const char *>());
+
+  WiFi.softAPdisconnect(true);
+  WiFi.setHostname(config["hostname"]);
+
+  // create WiFi AP
+  WiFi.softAPConfig(softAP_IP, softAP_IP, subnet);
+  WiFi.softAP(config["hostname"]);
+  Serial.println("OK");
+
+
+  // redirecting all the domains to the ESP
+  Serial.print("Start DNS ... ");
+  _dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+  _dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+  Serial.println("OK");  
+
+  // enable mDNS
+  Serial.print("Start mDNS ... ");
+  if( MDNS.begin(config["hostname"]) )
+  {
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("OK");
+  } else
+  {
+    Serial.println("Failed !");
+  }    
+  
+}
 
 /**
  * connect as WiFi Client
@@ -348,8 +402,8 @@ static void handleWifiScan()
  */
 static void handleWifiAdd()
 {
-  String ssid = _httpServer.arg("ssid");
-  String pwd = _httpServer.arg("pwd");
+  String ssid = sanity(_httpServer.arg("ssid"));
+  String pwd = sanity(_httpServer.arg("pwd"));
   Serial.print("add '" + ssid + "' to known networks list");
 
   auto credentials = config["credentials"].as<JsonObject>();
@@ -393,6 +447,30 @@ static void handleWifiDel()
     delay(100);
     connectWiFiClient();
   }
+}
+
+/**
+ * update host name
+ */
+static void handleUpdateHostname()
+{
+  String hostname = sanity(_httpServer.arg("hostname"));
+
+  // update hostname
+  if ( !hostname.length() )
+  {
+    // nothing to do, just send summary
+    return handleInfo();
+  }
+  config["hostname"] = hostname;
+  saveConfig(config);
+
+  // answer with updated info
+  handleInfo();
+
+  // re-start AP
+  startCaptiveAP();
+
 }
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
@@ -442,36 +520,19 @@ void CaptivePortal::setup()
 
   loadConfig(config);
 
-  // process config
+  // sanity check for config
   if (!config["hostname"])
     config["hostname"] = defaultConfig.hostname;
   if (!config["connectionTimeout"])
     config["connectionTimeout"] | defaultConfig.connectionTimeout;
-  IPAddress softAP_IP(defaultConfig.softAP_IP);
-  if (config["captivePortal"]["ip"].is<const char *>())
-    softAP_IP.fromString(config["captivePortal"]["ip"].as<const char *>());
-  IPAddress subnet(defaultConfig.subnet);
-  if (config["captivePortal"]["subnet"].is<const char *>())
-    subnet.fromString(config["captivePortal"]["subnet"].as<const char *>());
 
   // init WiFi
   WiFi.mode(WIFI_MODE_APSTA);
-  WiFi.softAPdisconnect(true);
   WiFi.setAutoReconnect(false);
   WiFi.persistent(false);
-  WiFi.setHostname(config["hostname"]);
 
-  // create WiFi AP
-  Serial.print("Start WiFi AP ... ");
-  WiFi.softAPConfig(softAP_IP, softAP_IP, subnet);
-  WiFi.softAP(config["hostname"]);
-  Serial.println("OK");
-
-  // redirecting all the domains to the ESP
-  Serial.print("Start DNS ... ");
-  _dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-  _dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-  Serial.println("OK");
+  // start AP
+  startCaptiveAP();
 
   // connect as WiFi Client
   connectWiFiClient();
@@ -481,20 +542,11 @@ void CaptivePortal::setup()
   Serial.print(", ");
   Serial.println(WiFi.localIP());
 
-  // enable mDNS
-  Serial.print("Start mDNS ... ");
-  if( MDNS.begin(config["hostname"]) )
-  {
-    MDNS.addService("http", "tcp", 80);
-    Serial.println("OK");
-  } else
-  {
-    Serial.println("Failed !");
-  }
 
   // setup HTTP server
   Serial.print("Start WebServer ... ");
   _httpServer.on("/c/info", handleInfo);     // send status info
+  _httpServer.on("/c/hostname", handleUpdateHostname); // update
   _httpServer.on("/c/scan", handleWifiScan); // scan active WiFi networks
   _httpServer.on("/c/add", handleWifiAdd);   // add credential for WiFi network
   _httpServer.on("/c/del", handleWifiDel);   // remove known WiFi network
@@ -504,6 +556,8 @@ void CaptivePortal::setup()
 
   // generic not found
   _httpServer.onNotFound(handleGenericHTTP);
+  Serial.println("OK");
+
 }
 
 void CaptivePortal::begin()

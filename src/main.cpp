@@ -30,7 +30,7 @@ void setup()
 
     captivePortal.begin();
 
-    Serial.println("OK");    
+    Serial.println("Captive Portal started!");    
 }
 
 void loop()

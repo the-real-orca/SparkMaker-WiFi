@@ -2,170 +2,176 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="style.css">
-    <script src="js/vue.js"></script>
-    <title>Captive Portal</title>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="style.css">
+	<script src="js/vue.js"></script>
+	<title>Captive Portal</title>
 </head>
 
 <body>
-<div id="app">
-    <h1 contenteditable v-text="title" @blur="updateTitle" @keydown.enter="updateTitle"></h1>
-    <h2>WiFi Networks</h2>
-    <div v-for="ap in availableNetworks">
-        <div class="network available" :class="{known: ap.known, connected: ap.connected}" @click="selectNetwork(ap)" >
-            <div class="bookmark" v-if="ap.known">&starf;</div>
-            <span class="ssid">{{ap.ssid}}</span>
-            <span class="encryption" v-if="ap.encrypted" >&#x1F512;</span>
-            <span class="rssi">{{ap.rssi}}</span>
-            <div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
-        </div>
-    </div>
-    <span v-if="knownNetworks.length>0"><i>not in range</i></span>
-    <div v-for="ap in knownNetworks"  @click="selectNetwork(ap)" >
-        <div class="network known" >
-            <div class="bookmark" v-if="ap.known">&starf;</div>
-            <span class="ssid">{{ap.ssid}}</span>
-            <span class="encryption" v-if="ap.encrypted" >&#x1F512;</span>
-            <div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
-        </div>
-    </div>
-    <button @click.stop="scanNetworks">Scan</button>
+	<div id="app">
+		<h1 contenteditable v-text="title" @blur="updateTitle" @keydown.enter="updateTitle"></h1>
+		<h2>WiFi Networks</h2>
+		<div v-for="ap in availableNetworks">
+			<div class="network available" :class="{known: ap.known, connected: ap.connected}" @click="selectNetwork(ap)">
+				<div class="bookmark" v-if="ap.known">&starf;</div>
+				<span class="ssid">{{ap.ssid}}</span>
+				<span class="encryption" v-if="ap.encrypted">&#x1F512;</span>
+				<span class="rssi">{{ap.rssi}}</span>
+				<div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
+			</div>
+		</div>
+		<span v-if="knownNetworks.length>0">
+			<i>not in range</i>
+		</span>
+		<div v-for="ap in knownNetworks" @click="selectNetwork(ap)">
+			<div class="network known">
+				<div class="bookmark" v-if="ap.known">&starf;</div>
+				<span class="ssid">{{ap.ssid}}</span>
+				<span class="encryption" v-if="ap.encrypted">&#x1F512;</span>
+				<div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
+			</div>
+		</div>
+		<button @click.stop="scanNetworks">Scan</button>
 
-    <h2>Add Network</h2>
-    <form @submit.prevent="addNetwork">
-        <div>
-            <label>SSID:</label> <input id="ssid" type="text" name="ssid" autocomplete="on" v-model="form.ssid">
-        </div>
-        <div>
-            <label>Password:</label> <input id="pwd" :type="form.showPwd ? 'text' : 'password'" name="pwd" autocomplete="on" v-model="form.pwd"><div class="showPwd" @click.stop="form.showPwd = !form.showPwd">&#x1f441;</div>
-        </div>
-        <button :disabled="!form.ssid">Connect</button>
-    </form>
+		<h2>Add Network</h2>
+		<form @submit.prevent="addNetwork">
+			<div>
+				<label>SSID:</label>
+				<input id="ssid" type="text" name="ssid" autocomplete="on" v-model="form.ssid">
+			</div>
+			<div>
+				<label>Password:</label>
+				<input id="pwd" :type="form.showPwd ? 'text' : 'password'" name="pwd" autocomplete="on" v-model="form.pwd">
+				<div class="showPwd" @click.stop="form.showPwd = !form.showPwd">&#x1f441;</div>
+			</div>
+			<button :disabled="!form.ssid">Connect</button>
+		</form>
 
-    <div class="modal" v-show="wait">
-        <div class="background"></div>
-        <div class="spinner"></div>
-    </div>
-</div>
+		<div class="modal" v-show="wait">
+			<div class="background"></div>
+			<div class="spinner"></div>
+		</div>
+	</div>
 
-<script>
-        var app = new Vue({
-          el: '#app',
-          data: {
-            title: 'Device Name',
-            networks: [],
-            form: {
-                ssid: "",
-                pwd: "",
-                showPwd: false
-            },
-            wait: false // TODO true
-          },
-          computed: {
-            availableNetworks() {
-                return this.networks.filter(item => (item.rssi < 0));
-            },
-            knownNetworks() {
-                return this.networks.filter(item => (!item.rssi && item.known));
-            }
-          },
-          mounted() {
-                fetch("/c/info")
-                    .then(response => response.json())
-                    .then(json => {
-                        if ( json.name )
-                            this.title = json.name;
-                    })              
-                    .catch(err => {})
-                fetch("/c/scan")
-                    .then(response => response.json())
-                    .then(json => {
-                        // update network list
-                        this.networks = json;
-                        this.wait = false;
-                    })
-                    .catch(err => {})
-          },
-          methods: {
-            updateTitle(event) {
-                this.title = event.target.innerText.replace(/[^\w\d_\-\+ ]/g, '').trim();
-                event.target.blur();
-                var formData = new FormData();
-                formData.append("hostname", this.title);
-                fetch("/c/hostname", {method: 'POST', body: formData})
-                    .then(resp => {})
-                    .catch(err => {});                
-            },
-            scanNetworks() {
-                this.wait = true;
-                fetch("/c/scan")
-                    .then(response => response.json())
-                    .then(json => {
-                        // update network list
-                        this.networks = json;
-                        this.wait = false;
-                    })
-                    .catch(err => {})
-            },
-            selectNetwork(ap) {
-                console.log("select: " + ap.ssid);
-                this.form.ssid = ap.ssid;
-                this.form.pwd = "";
-                document.getElementById("pwd").focus();
-            },
-            addNetwork() {
-                // send new credentials
-                this.wait = true;
-                var formData = new FormData();
-                formData.append("ssid", this.form.ssid);
-                formData.append("pwd", this.form.pwd);
-                fetch("/c/add", {method: 'POST', body: formData})
-                    .then(resp => {
-                        // delay next fetch and give ESP a chance to switch network
-                        var _this = this;
-                        setTimeout(function() {
-                            fetch("/c/scan")
-                                .then(response => response.json())
-                                .then(json => {
-                                    // update network list
-                                    _this.networks = json;
-                                    _this.wait = false;
-                                })
-                                .catch(err => {});
-                            }, 1000);
-                    })
-                    .catch(err => {});
+	<script>
+		var app = new Vue({
+			el: '#app',
+			data: {
+				title: 'Device Name',
+				networks: [],
+				form: {
+					ssid: "",
+					pwd: "",
+					showPwd: false
+				},
+				wait: false // TODO true
+			},
+			computed: {
+				availableNetworks() {
+					return this.networks.filter(item => (item.rssi < 0));
+				},
+				knownNetworks() {
+					return this.networks.filter(item => (!item.rssi && item.known));
+				}
+			},
+			mounted() {
+				fetch("/c/info")
+					.then(response => response.json())
+					.then(json => {
+						if (json.name)
+							this.title = json.name;
+					})
+					.catch(err => { })
+				fetch("/c/scan")
+					.then(response => response.json())
+					.then(json => {
+						// update network list
+						this.networks = json;
+						this.wait = false;
+					})
+					.catch(err => { })
+			},
+			methods: {
+				updateTitle(event) {
+					this.title = event.target.innerText.replace(/[^\w\d_\-\+ ]/g, '').trim();
+					event.target.blur();
+					var formData = new FormData();
+					formData.append("hostname", this.title);
+					fetch("/c/hostname", { method: 'POST', body: formData })
+						.then(resp => { })
+						.catch(err => { });
+				},
+				scanNetworks() {
+					this.wait = true;
+					fetch("/c/scan")
+						.then(response => response.json())
+						.then(json => {
+							// update network list
+							this.networks = json;
+							this.wait = false;
+						})
+						.catch(err => { })
+				},
+				selectNetwork(ap) {
+					console.log("select: " + ap.ssid);
+					this.form.ssid = ap.ssid;
+					this.form.pwd = "";
+					document.getElementById("pwd").focus();
+				},
+				addNetwork() {
+					// send new credentials
+					this.wait = true;
+					var formData = new FormData();
+					formData.append("ssid", this.form.ssid);
+					formData.append("pwd", this.form.pwd);
+					fetch("/c/add", { method: 'POST', body: formData })
+						.then(resp => {
+							// delay next fetch and give ESP a chance to switch network
+							var _this = this;
+							setTimeout(function () {
+								fetch("/c/scan")
+									.then(response => response.json())
+									.then(json => {
+										// update network list
+										_this.networks = json;
+										_this.wait = false;
+									})
+									.catch(err => { });
+							}, 1000);
+						})
+						.catch(err => { });
 
-                this.form.ssid = "";
-                this.form.pwd = "";
-            },            
-            deleteNetwork(del) {
-                // remove from known networks
-                if ( confirm("Remove '" + del.ssid + "'?") ) {
-                    this.wait = true;
-                    var formData = new FormData();
-                    formData.append("ssid", del.ssid);
-                    fetch("/c/del", {method: 'POST', body: formData})
-                        .then(resp => {
-                            // delay next fetch and give ESP a chance to switch network
-                            var _this = this;
-                            setTimeout(function() {
-                                fetch("/c/scan")
-                                    .then(response => response.json())
-                                    .then(json => {
-                                        // update network list
-                                        _this.networks = json;
-                                        _this.wait = false;
-                                    })
-                                    .catch(err => {});
-                                }, 1000);
-                        })
-                        .catch(err => {});
-                }
-            }      
-          }
-        })    
-</script>
+					this.form.ssid = "";
+					this.form.pwd = "";
+				},
+				deleteNetwork(del) {
+					// remove from known networks
+					if (confirm("Remove '" + del.ssid + "'?")) {
+						this.wait = true;
+						var formData = new FormData();
+						formData.append("ssid", del.ssid);
+						fetch("/c/del", { method: 'POST', body: formData })
+							.then(resp => {
+								// delay next fetch and give ESP a chance to switch network
+								var _this = this;
+								setTimeout(function () {
+									fetch("/c/scan")
+										.then(response => response.json())
+										.then(json => {
+											// update network list
+											_this.networks = json;
+											_this.wait = false;
+										})
+										.catch(err => { });
+								}, 1000);
+							})
+							.catch(err => { });
+					}
+				}
+			}
+		})    
+	</script>
 </body>
+
 </html>

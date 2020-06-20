@@ -17,6 +17,23 @@ Features
   - nice front-end (ToDo)
 - REST API for printer functions (partially)
 
+Hardware
+--------
+- ESP32 DevKit (esp32doit-devkit) or any other ESP32 based board
+
+
+Installation
+------------
+- install VSCode with PlatformIO add ESP32 support
+- open the project in VSCode
+- upload the SPIFFS Image to your board (PIO -> Upload File System image)
+- compile and upload the application (PIO -> Upload)
+- optional: open a serial terminal and monitor the output
+- connect your mobile phone to *SparkMaker* WiFi network
+- open the captive portal (192.168.4.1, if not opened automatically)
+- set and connect to your local WiFi
+- open the SparkMaker Web application: http://sparkmaker.local
+
 
 Acknowledgments
 ---------------

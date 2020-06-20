@@ -47,6 +47,7 @@ static BLESTATE bleState = NA;
  */
 const char *statusNames[] = {
 	"DISCONNECTED",
+	"CONNECTING",
 	"STANDBY",
 	"FILELIST",
 	"PRINTING",
@@ -100,6 +101,7 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	// sanity check
 	if (!txCharacteristic)
 	{
+		Serial.println("FAILURE: notification without txCharacteristic");
 		bleState = SCANNING;
 		return;
 	}
@@ -122,8 +124,6 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	*ptr = 0x00;	// terminate string
 	buffer_pos = 0; // buffer will be processed, next data will start a new line
 
-Serial.print("notifyCallback: "); Serial.println(buffer);
-
 	// heartbeat
 	if (strcmp(buffer, "online") == 0)
 	{
@@ -139,7 +139,7 @@ Serial.print("notifyCallback: "); Serial.println(buffer);
 			// send acknowledgement
 			Serial.println("schedule handshake ... ");
 			bleState = HANDSHAKE;
-			SparkMaker::printer.status = DISCONNECTED;
+			SparkMaker::printer.status = CONNECTING;
 		}
 		return;
 	}
@@ -180,6 +180,7 @@ Serial.print("notifyCallback: "); Serial.println(buffer);
 	if (strncmp(buffer, "F/S=", 4) == 0)
 	{
 		Serial.println("layer");
+Serial.println(buffer);
 		// TODO
 		return;
 	}
@@ -189,7 +190,6 @@ Serial.print("notifyCallback: "); Serial.println(buffer);
 	{
 		Serial.println("STANDBY");
 		SparkMaker::printer.status = STANDBY;
-		// TODO
 		return;
 	}
 
@@ -198,7 +198,6 @@ Serial.print("notifyCallback: "); Serial.println(buffer);
 	{
 		Serial.println("PRINTING");
 		SparkMaker::printer.status = PRINTING;
-		// TODO
 		return;
 	}
 
@@ -207,7 +206,6 @@ Serial.print("notifyCallback: "); Serial.println(buffer);
 	{
 		Serial.println("PAUSE");
 		SparkMaker::printer.status = PAUSE;
-		// TODO
 		return;
 	}
 
@@ -216,7 +214,6 @@ Serial.print("notifyCallback: "); Serial.println(buffer);
 	{
 		Serial.println("PRINTING");
 		SparkMaker::printer.status = PRINTING;
-		// TODO
 		return;
 	}
 
@@ -225,7 +222,6 @@ Serial.print("notifyCallback: "); Serial.println(buffer);
 	{
 		Serial.println("STOPPING");
 		SparkMaker::printer.status = STOPPING;
-		// TODO
 		return;
 	}
 
@@ -260,7 +256,6 @@ Serial.print("notifyCallback: "); Serial.println(buffer);
 	{
 		Serial.println("UPDATING");
 		SparkMaker::printer.status = UPDATING;
-		// TODO
 		return;
 	}
 
@@ -287,9 +282,9 @@ class ConnectionCallback : public BLEClientCallbacks
 };
 
 /**
- * connect to SparkMaker and subscribe to status
+ * disconnect from SparkMaker
  */
-bool connectBLE()
+bool disconnectBLE()
 {
 	Serial.println("connectBLE");
 
@@ -302,6 +297,20 @@ bool connectBLE()
 
 	txCharacteristic = NULL;
 	rxCharacteristic = NULL;
+
+	bleState = SCANNING;
+}
+
+/**
+ * connect to SparkMaker and subscribe to status
+ */
+bool connectBLE()
+{
+	Serial.println("connect BLE");
+
+	// delete old connections
+	disconnectBLE();
+
 	if (!sparkMakerBLEDevice)
 		return false;
 
@@ -386,14 +395,21 @@ void SparkMaker::loop()
 	case SCANNING:
 	default:
 		// scan for BLE devices
+		printer.status = DISCONNECTED;
+		Serial.println("scan BLE");
 		BLEDevice::getScan()->start(1);
 		break;
 
 	case FOUND:
 		// connect to SparkMaker device
-		if (!connectBLE())
+		if ( connectBLE() )
 		{
-			Serial.println("Cannot connect to SparkMaker");
+			Serial.println("Connecting to SparkMaker");
+			printer.status = CONNECTING;
+		}
+		else
+		{
+			Serial.println("FAILURE: Cannot connect to SparkMaker");
 			bleState = SCANNING;
 		}
 		break;
@@ -404,11 +420,19 @@ void SparkMaker::loop()
 	case HANDSHAKE:
 		// send handshake acknowledgement
 		Serial.print("send handshake ... ");
-		SparkMaker::printer.lastStatusRequest = 0;
-		cmd = "PWD-OK\n";
-		txCharacteristic->writeValue(cmd);
-		Serial.println("OK");
-		bleState = READ_FILES;
+		if ( txCharacteristic )
+		{
+			SparkMaker::printer.lastStatusRequest = 0;
+			cmd = "PWD-OK\n";
+			txCharacteristic->writeValue(cmd);
+			Serial.println("OK");
+			bleState = READ_FILES;
+		}
+		else
+		{
+			bleState = SCANNING;
+			Serial.println("Failed");
+		}
 		break;
 
 	case ONLINE:
@@ -417,11 +441,19 @@ void SparkMaker::loop()
 	case READ_FILES:
 		// query files from printer
 		Serial.print("read files ... ");
-		SparkMaker::printer.filenames.clear();
-		cmd = "scan-file\n";
-		txCharacteristic->writeValue(cmd);
-		Serial.println("OK");
-		bleState = ONLINE;
+		if ( txCharacteristic )
+		{
+			SparkMaker::printer.filenames.clear();
+			cmd = "scan-file\n";
+			txCharacteristic->writeValue(cmd);
+			Serial.println("OK");
+			bleState = ONLINE;
+		}
+		else
+		{
+			bleState = SCANNING;
+			Serial.println("Failed");
+		}
 		break;
 	}
 
@@ -431,11 +463,66 @@ void SparkMaker::loop()
 		unsigned long time = millis();
 		if ((time - printer.lastStatusRequest) > statusRequestInterval)
 		{
-			SparkMaker::printer.lastStatusRequest = time;
-			Serial.print("get status ... ");
-			cmd = "PWD-OK\n";
+			if ( txCharacteristic )
+			{
+				SparkMaker::printer.lastStatusRequest = time;
+				Serial.print("get status ... ");
+				cmd = "PWD-OK\n";
+				txCharacteristic->writeValue(cmd);
+				Serial.println("OK");
+			}
+			else
+			{
+				bleState = SCANNING;
+				Serial.println("Failed");
+			}
+		}
+	}
+}
+
+/**
+ * disconnect printer
+ */
+void SparkMaker::disconnect()
+{
+	disconnectBLE();
+	printer.status = DISCONNECTED;
+}
+
+/**
+ * send command
+ */
+void SparkMaker::send(String cmd)
+{
+	Serial.print("send command: "); Serial.println(cmd);
+	if ( txCharacteristic )
+	{
+		cmd += "\n";
+		txCharacteristic->writeValue(cmd.c_str());
+	}
+}
+
+/**
+ * start print
+ */
+void SparkMaker::startPrint()
+{
+	static std::string cmd;
+
+	if ( printer.status == STANDBY || printer.status == FINISHED  )
+	{
+		Serial.print("start printing ... ");
+		if ( txCharacteristic )
+		{
+			std::string cmd = "Start Printing;\n";
 			txCharacteristic->writeValue(cmd);
 			Serial.println("OK");
+			printer.status = PRINTING;
 		}
+		else
+		{
+			bleState = SCANNING;
+			Serial.println("Failed");
+		}		
 	}
 }

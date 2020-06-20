@@ -15,6 +15,7 @@
 typedef enum
 {
 	DISCONNECTED,
+	CONNECTING,
 	STANDBY,
 	FILELIST,
 	PRINTING,
@@ -46,6 +47,11 @@ class SparkMaker
   public:
 	static void setup();
 	static void loop();
+
+	static void disconnect();
+	static void send(String cmd);
+
+	static void startPrint();
 
 	static Printer printer;
 

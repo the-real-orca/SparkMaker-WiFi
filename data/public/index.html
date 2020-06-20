@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="style.css">
+	<script src="js/vue.js"></script>
+	<title>Captive Portal</title>
+</head>
+<body>
+	<div id="app">
+		<h1>{{title}}</h1>
+		<h2>Status</h2>
+		<div v-text="statusResponse"></div>
+		<button @click="update">update</button><br>
+		<h2>Debug Tools</h2>
+		URL: <input type="text" v-model="url"></input> <br>
+		<hr>
+		<button @click="requestStatus">Request Status</button><br>
+		<hr>
+<!--
+
+		<button @click="start">Start</button><br>
+		<button @click="stop">Stop</button><br>
+		<button @click="pause">Pause</button><br>
+		<button @click="resume">Resume</button><br>
+		<button @click="emergency">Emergency Stop</button><br>
+-->		
+		<hr>
+		<input type="text" v-model="customCmd"></input> <button @click="sendCmd">send</button><br>
+	</div>
+
+	<script>
+		var app = new Vue({
+			el: "#app",
+			data: {
+				title: "SparkMaker",
+				url: "http://sparkmaker.local",
+				statusResponse: "...",
+				customCmd: "",
+			},
+			computed: {
+			},
+			mounted() {
+			},
+			methods: {
+				update() {
+					var formData = new FormData();
+					fetch(this.url + "/status")
+						.then(response => response.json())
+						.then(json => {
+							this.statusResponse = json;
+						})
+						.catch(err => {});
+				},				
+				requestStatus() {
+					var formData = new FormData();
+					formData.append("cmd", "PWD-OK");
+					fetch(this.url + "/send", { method: 'POST', body: formData })
+						.then(resp => {})
+						.catch(err => {});
+				},
+				sendCmd() {
+					var formData = new FormData();
+					formData.append("cmd", this.customCmd);
+					fetch(this.url + "/send", { method: 'POST', body: formData })
+						.then(resp => {})
+						.catch(err => {});
+				}
+
+			}
+		})    
+	</script>
+</body>
+
+</html>

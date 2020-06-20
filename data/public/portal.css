@@ -149,9 +149,11 @@ button {
     border-radius: 0.3em;
     background: green;
     color: #f0f0f0;
+    display: block;
     font-size: 120%;
     margin: 0.5em auto;
     padding: 0.3em;
+    width: 8em;
     text-align: center;
 }
 button:disabled {

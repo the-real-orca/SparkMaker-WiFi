@@ -37,6 +37,31 @@ void handleStatus()
 	Serial.println(content);
 }
 
+void handleCmdDisconnect()
+{
+	spark.disconnect();
+
+	handleStatus();
+}
+
+void handleCmdPrint()
+{
+	spark.startPrint();
+
+	handleStatus();
+}
+
+/**
+ * debug interfact to send direct commands
+ */
+static void handleCmdSend() // HACK
+{
+	String cmd = captivePortal.getHttpServer().arg("cmd");
+	spark.send(cmd);
+	
+	captivePortal.sendFinal(200, "text/plain", "OK");
+}
+
 void setup()
 {
 	Serial.begin(115200);
@@ -52,6 +77,9 @@ void setup()
 	// custom pages
 	captivePortal.on("/", handleRoot);
 	captivePortal.on("/status", handleStatus);
+	captivePortal.on("/print", handleCmdPrint);
+	captivePortal.on("/send", handleCmdSend);
+	captivePortal.on("/disconnect", handleCmdDisconnect);
 
 	captivePortal.begin();
 

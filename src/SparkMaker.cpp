@@ -1,11 +1,22 @@
 
 #include <Arduino.h>
-#include <ArduinoJson.h>
 #include <BLEDevice.h>
 #include <BLEScan.h>
 #include "BLEUtils.h"
 
 #include "SparkMaker.h"
+
+// JSON
+#include <ArduinoJson.h>
+extern DynamicJsonDocument config;
+
+// SparkMaker defaults
+const static struct
+{
+	uint16_t statusRequestInterval = 60;	// periodic status request [s]
+} defaultConfig;
+static unsigned long statusRequestInterval;
+
 
 // SparkMaker remote service
 static BLEUUID SparkMakerServiceUUID("0000fff0-0000-1000-8000-00805f9b34fb");
@@ -30,7 +41,6 @@ typedef enum
 } BLESTATE;
 static BLESTATE bleState = NA;
 
-const unsigned long statusRequestInterval = 10000;
 
 /**
  * string names for WiFi encryption
@@ -83,7 +93,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
  */
 static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *data, size_t length, bool isNotify)
 {
-	const uint16_t BUFFER_SIZE = 256;
+	const size_t BUFFER_SIZE = 256;
 	static char buffer[BUFFER_SIZE];
 	static uint16_t buffer_pos = 0;
 
@@ -111,6 +121,8 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	}
 	*ptr = 0x00;	// terminate string
 	buffer_pos = 0; // buffer will be processed, next data will start a new line
+
+Serial.print("notifyCallback: "); Serial.println(buffer);
 
 	// heartbeat
 	if (strcmp(buffer, "online") == 0)
@@ -344,7 +356,10 @@ Printer SparkMaker::printer;
 void SparkMaker::setup()
 {
 	// start Bluetooth Low Energy
-	BLEDevice::init("");
+	BLEDevice::init(config["hostname"]);
+
+	// parse config
+	statusRequestInterval = ( config["SparkMaker"]["statusRequestInterval"] | defaultConfig.statusRequestInterval ) * 1000;
 
 	// get BLE scanner object
 	BLEScan *pBLEScan = BLEDevice::getScan();
@@ -371,12 +386,11 @@ void SparkMaker::loop()
 	case SCANNING:
 	default:
 		// scan for BLE devices
-		BLEDevice::getScan()->start(5);
+		BLEDevice::getScan()->start(1);
 		break;
 
 	case FOUND:
 		// connect to SparkMaker device
-
 		if (!connectBLE())
 		{
 			Serial.println("Cannot connect to SparkMaker");
@@ -413,6 +427,7 @@ void SparkMaker::loop()
 
 	if (bleState >= CONNECT)
 	{
+		// trigger status messages
 		unsigned long time = millis();
 		if ((time - printer.lastStatusRequest) > statusRequestInterval)
 		{

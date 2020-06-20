@@ -11,8 +11,14 @@
 #include <DNSServer.h>
 #include <ArduinoJson.h>
 
+// config
 #include "config.h"
+const size_t configJsonSize = 1024;
+extern DynamicJsonDocument config;
 
+
+// shared JSON buffer
+const size_t tempJsonSize = 2048;
 extern DynamicJsonDocument tempJson;
 
 class CaptivePortal

@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 
 // JSON
@@ -21,16 +20,21 @@ void handleRoot()
 void handleStatus()
 {
 	tempJson.clear();
-//	tempJson["status"] = statusNames[spark.printer.status];
+	tempJson["status"] = statusNames[spark.printer.status];
 	tempJson["currentLayer"] = spark.printer.currentLayer;
 	tempJson["totalLayers"] = spark.printer.totalLayers;
-//	tempJson["currentFile"] = spark.printer.currentFile;
-//	tempJson["filenames"] = spark.printer.filenames;
+	tempJson["currentFile"] = spark.printer.currentFile;
+	auto files = tempJson.createNestedArray("filenames");
+	for (auto const &file: spark.printer.filenames)
+	{
+		files.add(file.second);
+	}
 	
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
 	captivePortal.sendFinal(200, "application/json", content);
+	Serial.println(content);
 }
 
 void setup()
@@ -59,9 +63,5 @@ void setup()
 void loop()
 {
 	captivePortal.loop();
-
 	spark.loop();
-	delay(1000);
-	Serial.print("Status: ");
-	Serial.println(spark.printer.status);
 }

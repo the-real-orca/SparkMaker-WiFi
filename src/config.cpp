@@ -38,7 +38,7 @@ bool loadConfig(DynamicJsonDocument &configJson, const String &filename)
 		return false;
 	}
 
-	// TODO
+	// TODO remove debug output
 	Serial.print("JSON load: ");
 	serializeJsonPretty(configJson, Serial);
 	Serial.println();
@@ -67,7 +67,7 @@ bool saveConfig(const DynamicJsonDocument &config, const String &filename)
 		return false;
 	}
 
-	// TODO
+	// TODO remove debug output
 	Serial.print("JSON save: ");
 	serializeJsonPretty(config, Serial);
 	Serial.println();

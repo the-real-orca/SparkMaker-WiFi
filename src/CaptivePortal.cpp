@@ -24,18 +24,19 @@ static const byte HTTP_PORT = 80;
 WebServer _httpServer(HTTP_PORT);
 
 // JSON
-static DynamicJsonDocument config(1024);
-DynamicJsonDocument tempJson(1048);
+DynamicJsonDocument config(configJsonSize);
+DynamicJsonDocument tempJson(tempJsonSize);
 
 // Captive Portal defaults
 const static struct
 {
-	uint16_t connectionTimeout = 5;
+	uint16_t wifiClientConnectionTimeout = 5;
 	uint8_t softAP_IP[4] = {192, 168, 4, 1};
 	uint8_t subnet[4] = {255, 255, 255, 0};
 	String hostname = "ESP-" + String(ESP_getChipId());
 	String portalPath = "portal.html";
 } defaultConfig;
+static uint16_t wifiClientConnectionTimeout;
 
 /**
  * sanity check for strings
@@ -58,11 +59,11 @@ void startCaptiveAP()
 	Serial.print("Start WiFi AP: " + config["hostname"].as<String>() + " ... ");
 
 	IPAddress softAP_IP(defaultConfig.softAP_IP);
-	if (config["captivePortal"]["ip"].is<const char *>())
-		softAP_IP.fromString(config["captivePortal"]["ip"].as<const char *>());
+	if (config["CaptivePortal"]["ip"].is<const char *>())
+		softAP_IP.fromString(config["CaptivePortal"]["ip"].as<const char *>());
 	IPAddress subnet(defaultConfig.subnet);
-	if (config["captivePortal"]["subnet"].is<const char *>())
-		subnet.fromString(config["captivePortal"]["subnet"].as<const char *>());
+	if (config["CaptivePortal"]["subnet"].is<const char *>())
+		subnet.fromString(config["CaptivePortal"]["subnet"].as<const char *>());
 
 	WiFi.softAPdisconnect(true);
 	WiFi.setHostname(config["hostname"]);
@@ -98,31 +99,36 @@ void startCaptiveAP()
 void connectWiFiClient()
 {
 	// scan for networks and connect to strongest one we have credentials
-	uint16_t connectionTimeout = config["connectionTimeout"];
 	WiFi.disconnect();
 	WiFi.scanDelete();
 	int n = WiFi.scanNetworks(false, false);
-	for (int j = 0; j < n && WiFi.status() != WL_CONNECTED; j++)
+	bool connected = false;
+	for (int j = 0; j < n && !connected; j++)
 	{
 		String ssid = WiFi.SSID(j);
-		if (config["credentials"].containsKey(ssid))
+		Serial.print("Found Network: "); Serial.println(ssid);
+		if (config["Credentials"].containsKey(ssid))
 		{
-			String pwd = config["credentials"][ssid];
+			String pwd = config["Credentials"][ssid];
 			Serial.print("Connect to ");
 			Serial.print(ssid);
 			Serial.print(" ... ");
 			WiFi.begin(ssid.c_str(), pwd.c_str());
 			// wait for connection
-			for (int16_t i = connectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
+
+			for (int16_t i = wifiClientConnectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
 			{
 				delay(100);
 			}
+			if (WiFi.status() == WL_CONNECTED)
+			{
+				connected = true;
+				Serial.println("OK");
+			}
+			else
+				Serial.println("Failed");
 		}
 	}
-	if (WiFi.status() == WL_CONNECTED)
-		Serial.println("OK");
-	else
-		Serial.println("Failed");
 }
 
 /**
@@ -137,8 +143,7 @@ void connectWiFiClient(String ssid, String pwd)
 	Serial.print(" ... ");
 	WiFi.begin(ssid.c_str(), pwd.c_str());
 	// wait for connection
-	uint16_t connectionTimeout = config["connectionTimeout"];
-	for (int16_t i = connectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
+	for (int16_t i = wifiClientConnectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
 	{
 		delay(100);
 	}
@@ -191,7 +196,7 @@ static void handleCaptiveRequest()
 {
 	// redirect
 	Serial.println("request captured and redirected");
-	String portalPath = config["captivePortal"]["path"] | defaultConfig.portalPath;
+	String portalPath = config["CaptivePortal"]["path"] | defaultConfig.portalPath;
 	_httpServer.sendHeader("Location", "http://" + config["hostname"].as<String>() + ".local/" + portalPath, true);
 	_httpServer.send(302, "text/html", "");
 	_httpServer.client().stop();
@@ -319,7 +324,7 @@ static void handleInfo()
 	// scan available networks
 	tempJson.clear();
 	tempJson["name"] = config["hostname"];
-	auto portal = tempJson.createNestedObject("captivePortal");
+	auto portal = tempJson.createNestedObject("CaptivePortal");
 	portal["ssid"] = config["hostname"];
 	portal["ip"] = WiFi.softAPIP().toString();
 	auto client = tempJson.createNestedObject("client");
@@ -372,7 +377,7 @@ static void handleWifiScan()
 	}
 
 	// augment known networks
-	auto credentials = config["credentials"].as<JsonObject>();
+	auto credentials = config["Credentials"].as<JsonObject>();
 	for (const auto &kv : credentials)
 	{
 		// search in networks
@@ -403,7 +408,7 @@ static void handleWifiScan()
 	_httpServer.sendHeader("Access-Control-Allow-Origin", "*");
 	_httpServer.send(200, "application/json", content);
 	_httpServer.client().stop();
-	Serial.println(content); // TODO
+	Serial.println(content);
 }
 
 /**
@@ -415,7 +420,7 @@ static void handleWifiAdd()
 	String pwd = sanity(_httpServer.arg("pwd"));
 	Serial.print("add '" + ssid + "' to known networks list");
 
-	auto credentials = config["credentials"].as<JsonObject>();
+	auto credentials = config["Credentials"].as<JsonObject>();
 	credentials[ssid] = pwd;
 	saveConfig(config);
 
@@ -442,7 +447,7 @@ static void handleWifiDel()
 
 	bool reconnect = (ssid == WiFi.SSID());
 
-	config["credentials"].remove(ssid);
+	config["Credentials"].remove(ssid);
 	saveConfig(config);
 
 	// send reply
@@ -531,8 +536,7 @@ void CaptivePortal::setup()
 	// sanity check for config
 	if (!config["hostname"])
 		config["hostname"] = defaultConfig.hostname;
-	if (!config["connectionTimeout"])
-		config["connectionTimeout"] | defaultConfig.connectionTimeout;
+	wifiClientConnectionTimeout = config["CaptivePortal"]["wifiClientConnectionTimeout"] | defaultConfig.wifiClientConnectionTimeout;
 
 	// init WiFi
 	WiFi.mode(WIFI_MODE_APSTA);

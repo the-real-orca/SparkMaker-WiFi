@@ -48,10 +48,18 @@ class SparkMaker
 	static void setup();
 	static void loop();
 
+	static void connect();
 	static void disconnect();
 	static void send(String cmd);
 
-	static void startPrint();
+	static void print(String filename);
+	static void stopPrint();
+	static void pausePrint();
+	static void resumePrint();
+	static void emergencyStop();
+
+	static void move(int16_t pos);
+	static void home();
 
 	static Printer printer;
 

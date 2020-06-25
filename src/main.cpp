@@ -11,12 +11,6 @@ CaptivePortal captivePortal;
 #include "SparkMaker.h"
 SparkMaker spark;
 
-void handleRoot()
-{
-	// TODO
-	captivePortal.sendFinal(200, "text/plain", "Hello World");
-}
-
 void handleStatus()
 {
 	tempJson.clear();
@@ -40,15 +34,28 @@ void handleStatus()
 void handleCmdDisconnect()
 {
 	spark.disconnect();
+	handleStatus();
+}
 
+void handleCmdConnect()
+{
+	spark.connect();
 	handleStatus();
 }
 
 void handleCmdPrint()
 {
-	spark.startPrint();
+	String file = captivePortal.getHttpServer().arg("file");
+	spark.print(file);
+	captivePortal.sendFinal(200, "text/plain", "OK");
+}
 
-	handleStatus();
+void handleCmdMove()
+{
+	int16_t pos = captivePortal.getHttpServer().arg("pos").toInt();
+	if ( pos )
+		spark.move(pos);
+	captivePortal.sendFinal(200, "text/plain", "OK");
 }
 
 /**
@@ -58,7 +65,6 @@ static void handleCmdSend() // HACK
 {
 	String cmd = captivePortal.getHttpServer().arg("cmd");
 	spark.send(cmd);
-	
 	captivePortal.sendFinal(200, "text/plain", "OK");
 }
 
@@ -75,10 +81,19 @@ void setup()
 	captivePortal.setup();
 
 	// custom pages
-	captivePortal.on("/", handleRoot);
 	captivePortal.on("/status", handleStatus);
 	captivePortal.on("/print", handleCmdPrint);
+
+	captivePortal.on("/stop", [](){ spark.stopPrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/pause", [](){ spark.pausePrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/resume", [](){ spark.resumePrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/emergencyStop", [](){ spark.emergencyStop(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/home", [](){ spark.home(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/move", handleCmdMove);
+
+
 	captivePortal.on("/send", handleCmdSend);
+	captivePortal.on("/connect", handleCmdConnect);
 	captivePortal.on("/disconnect", handleCmdDisconnect);
 
 	captivePortal.begin();

@@ -69,67 +69,8 @@ h2 {
     color: #f0f0f0;
 }
 
-.network {
-    border: lightgray solid 1px;
-    border-radius: 0.3em;
-    margin: 0.5em;
-    padding: 0.75em 1.5em;
-    background: #f8f8f8;
-}
-.network > span {
-    margin: 0 0.1em;
-}
-
-.available {
-    background: lightcyan;
-}
-
-.known {
-    font-weight: bold;
-}
-
-.connected {
-    background: lightgreen !important;
-}
-
-.rssi {
-    font-weight: normal;
-    font-size: 75%;
-}
-.rssi::after {
-    content: "dB";
-}
-
-.bookmark {
-    display: inline-block;
-    position: absolute;
-    left:1em;    
-}
-
-.del {
-    display: inline-block;
-    position: absolute;
-    color: darkred;
-    font-weight: bold;
-    right: 0;
-    padding: 0.1em;
-    width: 3em;
+.center {
     text-align: center;
-    font-size: 120%;
-    cursor: pointer;    
-}
-
-.showPwd {
-    display: inline-block;
-    position: absolute;
-    color: gray;
-    font-weight: bold;
-    right: 1em;
-    padding: 0.1em;
-    width: 2em;
-    text-align: center;
-    font-size: 175%;    
-    cursor: pointer;
 }
 
 label {
@@ -138,6 +79,7 @@ label {
     width: 6em;
     margin: 0.5em;
 }
+
 input {
     display: inline-block;
     font-size: 120%;
@@ -145,6 +87,7 @@ input {
     padding: 0.3em;
     width: 16em;
 }
+
 button {
     border-radius: 0.3em;
     background: green;
@@ -154,6 +97,7 @@ button {
     padding: 0.3em;
     text-align: center;
 }
+
 button:disabled {
     background: gray;
     color: darkgray;

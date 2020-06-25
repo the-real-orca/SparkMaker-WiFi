@@ -13,7 +13,7 @@ extern DynamicJsonDocument config;
 // SparkMaker defaults
 const static struct
 {
-	uint16_t statusRequestInterval = 60;	// periodic status request [s]
+	uint16_t statusRequestInterval = 30;	// periodic status request [s]
 } defaultConfig;
 static unsigned long statusRequestInterval;
 
@@ -32,6 +32,7 @@ static BLERemoteCharacteristic *rxCharacteristic = NULL;
 typedef enum
 {
 	NA,
+	OFFLINE,
 	SCANNING,
 	FOUND,
 	CONNECT,
@@ -107,7 +108,12 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	}
 
 	// append to buffer
-	uint16_t len = BUFFER_SIZE - buffer_pos - 1;
+	int16_t len = BUFFER_SIZE - buffer_pos - 2;
+	if ( len < 0 )
+	{
+		buffer_pos = 0;
+		buffer[buffer_pos] = 0x00;
+	}
 	if (length < len)
 		len = length;
 	memcpy(buffer + buffer_pos, data, len);
@@ -159,29 +165,34 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	{
 		char *filename = buffer + 2;
 		// read file index from message
-		uint16_t id = 0;
 		ptr = strrchr(filename, '.');
 		if (ptr)
 		{
 			*ptr = 0x00;
 			ptr++;
-			id = strtol(ptr, NULL, 10);
+			uint16_t id = 0;
+			id = atoi(ptr);
 			Serial.print("file list: #");
 			Serial.print(id);
 			Serial.print(" ");
 			Serial.println(filename);
+
+			// add filename to file list
+			SparkMaker::printer.filenames.insert(std::pair<uint16_t, std::string>(id, filename));
 		}
-		// add filename to file list
-		SparkMaker::printer.filenames.insert(std::pair<uint16_t, std::string>(id, filename));
 		return;
 	}
 
 	// layer
 	if (strncmp(buffer, "F/S=", 4) == 0)
 	{
-		Serial.println("layer");
-Serial.println(buffer);
-		// TODO
+		Serial.print("layer: ");
+		ptr = buffer + 4;
+		SparkMaker::printer.currentLayer = atoi(ptr);
+		ptr = strchr(ptr, '/');
+		if ( ptr )
+			SparkMaker::printer.totalLayers = atoi(++ptr);
+		Serial.print(SparkMaker::printer.currentLayer); Serial.print('/'); Serial.println(SparkMaker::printer.totalLayers);
 		return;
 	}
 
@@ -259,6 +270,13 @@ Serial.println(buffer);
 		return;
 	}
 
+	// update
+	if (strcmp(buffer, "OK") == 0)
+	{
+		Serial.println("OK");
+		return;
+	}	
+
 	// unknown message
 	Serial.print("UNKNOWN MESSAGE: ");
 	Serial.println(buffer);
@@ -276,7 +294,7 @@ class ConnectionCallback : public BLEClientCallbacks
 	void onDisconnect(BLEClient *client)
 	{
 		Serial.println("onDisconnect");
-		bleState = SCANNING;
+		bleState = OFFLINE;
 		SparkMaker::printer.status = DISCONNECTED;
 	}
 };
@@ -298,7 +316,7 @@ bool disconnectBLE()
 	txCharacteristic = NULL;
 	rxCharacteristic = NULL;
 
-	bleState = SCANNING;
+	bleState = OFFLINE;
 }
 
 /**
@@ -375,7 +393,6 @@ void SparkMaker::setup()
 	pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks);
 	pBLEScan->setInterval(1000);
 	pBLEScan->setWindow(500);
-	// start BLE scan
 	pBLEScan->setActiveScan(true);
 
 	// SparkMaker state handling
@@ -392,6 +409,11 @@ void SparkMaker::loop()
 
 	switch (bleState)
 	{
+	case NA:
+	case OFFLINE:
+		// nothing to do
+		break;
+		
 	case SCANNING:
 	default:
 		// scan for BLE devices
@@ -478,6 +500,21 @@ void SparkMaker::loop()
 			}
 		}
 	}
+
+}
+
+/**
+ * connect printer
+ */
+void SparkMaker::connect()
+{
+	disconnectBLE();
+	
+// TODO
+
+	// start BLE scanning
+	bleState = SCANNING;
+	SparkMaker::printer.status = DISCONNECTED;	
 }
 
 /**
@@ -494,35 +531,103 @@ void SparkMaker::disconnect()
  */
 void SparkMaker::send(String cmd)
 {
-	Serial.print("send command: "); Serial.println(cmd);
+	Serial.println("send command: "); Serial.println(cmd);
 	if ( txCharacteristic )
 	{
-		cmd += "\n";
 		txCharacteristic->writeValue(cmd.c_str());
+	}
+}
+
+/**
+ * relative move Z position
+ */
+void SparkMaker::move(int16_t pos)
+{
+	if ( pos == 0 || pos < -50 || pos > 50 )
+		return;
+
+	if ( printer.status == STANDBY || printer.status == FINISHED || printer.status == PAUSE )
+	{
+		Serial.println("move Z position");
+		String cmd = "G1 Z" + String(pos) + ";";
+		if ( txCharacteristic )
+			txCharacteristic->writeValue(cmd.c_str());
+	}
+}
+
+/**
+ * move Z to home position
+ */
+void SparkMaker::home()
+{
+	if ( printer.status == STANDBY || printer.status == FINISHED )
+	{
+		Serial.println("home Z");
+		if ( txCharacteristic )
+			txCharacteristic->writeValue("G28 Z0;");
 	}
 }
 
 /**
  * start print
  */
-void SparkMaker::startPrint()
+void SparkMaker::print(String filename)
 {
-	static std::string cmd;
-
 	if ( printer.status == STANDBY || printer.status == FINISHED  )
 	{
-		Serial.print("start printing ... ");
-		if ( txCharacteristic )
+		if ( !filename.isEmpty() )
 		{
-			std::string cmd = "Start Printing;\n";
-			txCharacteristic->writeValue(cmd);
-			Serial.println("OK");
-			printer.status = PRINTING;
+			// TODO select file to print
 		}
-		else
-		{
-			bleState = SCANNING;
-			Serial.println("Failed");
-		}		
+
+		Serial.print("start printing");
+		if ( txCharacteristic )
+			txCharacteristic->writeValue("Start Printing;");
 	}
+}
+
+/**
+ * stop print
+ */
+void SparkMaker::stopPrint()
+{
+	Serial.println("stop printing");
+	if ( txCharacteristic )
+		txCharacteristic->writeValue("Stop Printing;");
+}
+
+/**
+ * pause print
+ */
+void SparkMaker::pausePrint()
+{
+	if ( printer.status == PRINTING  )
+	{
+		Serial.println("pause printing");
+		if ( txCharacteristic )
+			txCharacteristic->writeValue("Pause Printing;");
+	}
+}
+
+/**
+ * resume print
+ */
+void SparkMaker::resumePrint()
+{
+	if ( printer.status == PAUSE  )
+	{
+		Serial.println("resume printing");
+		if ( txCharacteristic )
+			txCharacteristic->writeValue("Keep Printing;");
+	}
+}
+
+/**
+ * emergency stop
+ */
+void SparkMaker::emergencyStop()
+{
+	Serial.println("emergency stop");
+	if ( txCharacteristic )
+		txCharacteristic->writeValue("Emergency;");
 }

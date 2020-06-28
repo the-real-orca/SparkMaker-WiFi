@@ -1,104 +1,254 @@
+@media screen and (max-width: 599px) {
+	body {
+		font-size: 12px;
+	}
+  }
+
 body {
-    margin: 3em auto;
-    width: 30em;
-    font-family: Arial, sans-serif;
-    position: relative;
-    cursor: default;
+	margin: 3em auto;
+	max-width: 40em;
+	font-family: Arial, sans-serif;
+	position: relative;
+	cursor: default;
+	background: #E0E0E0;
+	background: linear-gradient(90deg, rgba(100,100,100,0.2) 0%, rgba(100,100,100,0.0) 25%,  rgba(100,100,100,0.0) 75%,  rgba(100,100,100,0.2) 100% );
 }
 
 .modal {
-    position: fixed;
-    width: 100vw;
-    height: 100vh;
-    top: 0;
-    left: 0;
+	position: fixed;
+	width: 100vw;
+	height: 100vh;
+	top: 0;
+	left: 0;
 }
 .background {
-    position: fixed;
-    background: black;
-    opacity: 0.5;
-    width: 100%;
-    height: 100%;
+	position: fixed;
+	background: black;
+	opacity: 0.5;
+	width: 100%;
+	height: 100%;
 }
 
 .spinner {
-    position: relative;
-    width: 8em;
-    height: 8em;
-    margin: 15em auto;
-    z-index: 10;
-    border-radius: 100%;
-    border-top: cyan 0.8em solid;
-    animation: sk-scaleout 2.0s infinite  ease-in-out;
+	position: relative;
+	width: 8em;
+	height: 8em;
+	margin: 15em auto;
+	z-index: 10;
+	border-radius: 100%;
+	border-top: cyan 0.8em solid;
+	animation: sk-scaleout 2.0s infinite  ease-in-out;
 }
 .spinner::after {
-    content: "";
-    width: 50%;
-    height: 50%;
-    border-radius: 100%;
-    border-top: cyan 0.8em solid;
-    display: block;
-    margin: 15% auto;  
-    animation: sk-scaleout 2.0s infinite ease-in-out;
+	content: "";
+	width: 50%;
+	height: 50%;
+	border-radius: 100%;
+	border-top: cyan 0.8em solid;
+	display: block;
+	margin: 15% auto;  
+	animation: sk-scaleout 2.0s infinite ease-in-out;
 }
 @keyframes sk-scaleout {
-    0% { transform: scale(0.3); }
-    100% { transform: scale(1.4); opacity: 0.2; }
+	0% { transform: scale(0.3); }
+	100% { transform: scale(1.4); opacity: 0.2; }
 }
 
 [contenteditable]::after {
-    content: "\1F589";
-    opacity: 0.5;
-    position: absolute;
-    padding-left: 1em;
-    font-size: 66%;
+	content: "\1F589";
+	opacity: 0.5;
+	position: absolute;
+	padding-left: 1em;
+	font-size: 66%;
 }
 
 h1 {
-    text-align: center;
+	text-align: center;
 }
 
 h2 {
-    text-align: center;
-    margin-top: 1.5em;
-    padding: 0.2em;
+	text-align: center;
+	margin-top: 1.5em;
+	padding: 0.2em;
 
-    border: gray solid 1px;
-    border-radius: 0.3em;
-    background: darkcyan;
-    color: #f0f0f0;
+	border: gray solid 1px;
+	border-radius: 0.3em;
+	background: darkcyan;
+	color: #f0f0f0;
 }
 
 .center {
-    text-align: center;
+	text-align: center;
+}
+
+#printer 
+{
+	position: relative;
+}
+
+#printer-img {
+	border-top-right-radius: 50% 5%;
+	border-top-left-radius: 50% 5%;
+	border-bottom-right-radius: 50% 5%; 
+	border-bottom-left-radius: 50% 5%;
+	background: linear-gradient(90deg, rgba(50,50,50,1) 0%, rgba(10,10,10,1) 100%);
+	margin: 3em auto;
+	height:22em;
+	width:13em;
+	animation: fadeIn 2s;
+	box-shadow: -5px 5px 45px #0009;
+}
+
+#printer-top {
+	height: 70%;
+	border-top-right-radius: 50% 5%;
+	border-top-left-radius: 50% 5%;
+	border-bottom-right-radius: 50% 5%; 
+	border-bottom-left-radius: 50% 5%;
+	background: linear-gradient(90deg, rgba(100,10,10,1) 0%, rgba(200,20,20,1) 100%);
+	text-align: center;
+	font-size: 150%;
+	color: #EEE;
+	text-shadow: 0.1em 0.1em 0.2em black;
+	padding-top: 1em;
+}
+
+#status {
+	font-weight: bold;
+	margin: 1em;
+}
+
+#percent {
+	margin: 0.1em;
+	font-size: 350%;
+}
+
+#indicator {
+	height:2.5em; 
+	width:2.5em; 
+	border-radius:50%; 
+	border-style: solid; 
+	margin: 0.5em auto; 
+	background: #333;
+	cursor: pointer;
+}
+@keyframes glow {50% {border-color:#000}}
+@keyframes fadeOut {100% {opacity: 0}}
+@keyframes fadeIn {0% {opacity: 0}}
+
+#sd-slot {
+	height:0.5em; 
+	width:3em; 
+	background:#000;
+	margin: 0.5em auto;
+}
+
+
+.DISCONNECTED {border-color: gray;}
+.CONNECTING {
+	border-color: lightblue;
+	animation: glow 2s infinite ease-in-out;
+}
+.STANDBY, .FILELIST, .FINISHED {border-color: green;}
+.PRINTING {
+	border-color: red;
+	animation: glow 6s infinite ease-in-out;
+}
+.PAUSE, .STOPPING { border-color: blue; }
+.NO_CARD {border-color: cyan;}
+.UPDATING {border-color: purple;}
+
+
+.control {
+	font-size: 115%;
+}
+
+.control select {
+	font-size: 100%;
+	border: 1px solid gray;
+	padding: 0.5em;
+	border-radius: 0.2em;
+	min-width: 8em;
+}
+
+.control {
+}
+
+.control button {
+	font-size: 100%;
+	width: 5em;
+	margin: 1em;
+}
+
+.move {
+	position: absolute;
+	right: 0em;
+	top: 1em;
+}
+
+.move button {
+	font-size: 90%;
+	padding: 0.5em;
+	margin: 0.2em;
+	width: 3em;
+}
+
+button.home {
+	width: 4em;
 }
 
 label {
-    display: inline-block;
-    font-style: italic;
-    width: 6em;
-    margin: 0.5em;
+	display: inline-block;
+	font-style: italic;
+	margin: 0.5em;
 }
 
-input {
-    display: inline-block;
-    font-size: 120%;
-    margin: 0.3em 0.5em;
-    padding: 0.3em;
-    width: 16em;
-}
 
-button {
-    border-radius: 0.3em;
-    background: green;
-    color: #f0f0f0;
-    font-size: 120%;
-    margin: 0.5em auto;
-    padding: 0.3em;
+button, .button {
+	padding: 0.6em;
+	margin: .3em 0;
+	min-width: 2.5em;
+	transition: none;
+	box-shadow: .1em .1em .2em rgba(255, 255, 255, 0.5) inset, -.1em -.1em .2em rgba(0, 0, 0, 0.5) inset;
+    cursor: pointer;
+	height: auto;	
+    width: auto;
+	display: inline-block;
     text-align: center;
+    vertical-align: middle;
+    background: #0074d9;
+    color: #fff;
+    border: 0;
+    border-radius: .2em;
+	user-select: none;
+}
+button.flat, .button.flat {
+	box-shadow: none;
+	border: .1em rgba(100, 100, 100, 0.2) solid;
+}
+button.pseudo, .button.pseudo {
+	box-shadow: none;
+}
+button:focus {
+	box-shadow: .1em .1em .2em rgba(255, 255, 255, 0.5) inset, -.1em -.1em .2em rgba(0, 0, 0, 0.5) inset;
+}
+button.active, .button.active, button:active, .button:active {
+	box-shadow: -.1em -.1em .1em rgba(255, 255, 255, 0.5) inset, .1em .1em .3em rgba(0, 0, 0, 0.5) inset, inset 0 0 0 99em rgba(20,20,20,0.1);
+}
+button[disabled], .button[disabled], [disabled] button {
+	cursor: default;
+	box-shadow: none;
+	background: #ccc !important;
+    color: #888 !important;	
 }
 
-button:disabled {
-    background: gray;
-    color: darkgray;
+button.primary, .button.primary, button.success, .button.success {
+    background: #2ecc40;
+}
+
+fieldset {
+	border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 0.3em;
+    margin: 0.5em;
+	padding: 1em;
 }

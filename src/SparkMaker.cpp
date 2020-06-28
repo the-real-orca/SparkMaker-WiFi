@@ -445,9 +445,7 @@ void SparkMaker::loop()
 		if ( txCharacteristic )
 		{
 			SparkMaker::printer.lastStatusRequest = 0;
-			cmd = "PWD-OK\n";
-			txCharacteristic->writeValue(cmd);
-			Serial.println("OK");
+			SparkMaker::requestStatus();
 			bleState = READ_FILES;
 		}
 		else
@@ -487,11 +485,7 @@ void SparkMaker::loop()
 		{
 			if ( txCharacteristic )
 			{
-				SparkMaker::printer.lastStatusRequest = time;
-				Serial.print("get status ... ");
-				cmd = "PWD-OK\n";
-				txCharacteristic->writeValue(cmd);
-				Serial.println("OK");
+				SparkMaker::requestStatus();
 			}
 			else
 			{
@@ -535,6 +529,19 @@ void SparkMaker::send(String cmd)
 	if ( txCharacteristic )
 	{
 		txCharacteristic->writeValue(cmd.c_str());
+	}
+}
+
+/**
+ * send status request
+ */
+void SparkMaker::requestStatus()
+{
+	Serial.println("send status request");
+	if ( txCharacteristic )
+	{
+		SparkMaker::printer.lastStatusRequest = millis();
+		txCharacteristic->writeValue("PWD-OK\n");
 	}
 }
 

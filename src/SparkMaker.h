@@ -58,6 +58,8 @@ class SparkMaker
 	static void resumePrint();
 	static void emergencyStop();
 
+	static void requestStatus();
+
 	static void move(int16_t pos);
 	static void home();
 

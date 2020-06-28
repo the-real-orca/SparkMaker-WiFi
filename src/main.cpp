@@ -18,7 +18,7 @@ void handleStatus()
 	tempJson["currentLayer"] = spark.printer.currentLayer;
 	tempJson["totalLayers"] = spark.printer.totalLayers;
 	tempJson["currentFile"] = spark.printer.currentFile;
-	auto files = tempJson.createNestedArray("filenames");
+	auto files = tempJson.createNestedArray("fileList");
 	for (auto const &file: spark.printer.filenames)
 	{
 		files.add(file.second);
@@ -88,6 +88,7 @@ void setup()
 	captivePortal.on("/pause", [](){ spark.pausePrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
 	captivePortal.on("/resume", [](){ spark.resumePrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
 	captivePortal.on("/emergencyStop", [](){ spark.emergencyStop(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/requestStatus", [](){ spark.requestStatus(); captivePortal.sendFinal(200, "text/plain", "OK"); });
 	captivePortal.on("/home", [](){ spark.home(); captivePortal.sendFinal(200, "text/plain", "OK"); });
 	captivePortal.on("/move", handleCmdMove);
 

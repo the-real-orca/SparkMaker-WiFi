@@ -14,7 +14,10 @@
 			<div id="printer-img">
 				<div id="printer-top">
 					<div id="status">{{statusText}}</div>
-					<div id="percent" v-if="spark.status=='PRINTING' || spark.status=='PAUSE'">{{percent}}%</div>
+					<div v-if="spark.status=='PRINTING' || spark.status=='PAUSE' || spark.status=='FINISHED'">
+						<div id="percent">{{percent}}%</div>
+						<div id="layer">({{spark.currentLayer}} / {{spark.totalLayers}})</div>
+					</div>
 				</div>
 				<div id="printer-bottom" class="p-1">
 					<div id="indicator" :class="spark.status" @click="indicator"></div>
@@ -39,11 +42,10 @@
 		<fieldset class="control center">
 			<div class="fileselect">
 				<label>file:</label>
-				<select :disabled="spark.status!='STANDBY'">
-					<option>---</option>
-					<option>file 1</option>
-					<option>file 2</option>
+				<select v-model="selectedFile" v-if="spark.status=='STANDBY' || spark.status=='FINISHED'"  class="filename">
+					<option v-for="file in spark.fileList">{{file}}</option>					
 				</select>
+				<span v-else class="filename">{{spark.currentFile}}</span>
 			</div>
 			<div class="command">
 				<div v-if="spark.status=='PRINTING'">
@@ -53,26 +55,9 @@
 					<button @click="resume">Resume</button> <button @click="stop">Stop</button>
 				</div>
 				<div v-else >
-					<button @click="start" class="primary" :disabled="!(spark.status=='STANDBY' || spark.status=='FINISHED')">Print</button>
+					<button @click="start" class="primary" :disabled="!printable">Print</button>
 				</div>
 			</div>
-		</fieldset>
-	
-		<fieldset>
-			<legend>DEBUG</legend>
-			Status:
-			<select v-model="spark.status">
-				<option>DISCONNECTED</option>
-				<option>CONNECTING</option>
-				<option>STANDBY</option>
-				<option>FILELIST</option>
-				<option>PRINTING</option>
-				<option>PAUSE</option>
-				<option>FINISHED</option>
-				<option>STOPPING</option>
-				<option>NO_CARD</option>
-				<option>UPDATING</option>
-			</select>
 		</fieldset>
 
 	</div>
@@ -81,24 +66,17 @@
 		var app = new Vue({
 			el: "#app",
 			data: {
-				url: "http://sparkmaker.local",
-				spark: {
-					"status": "STANDBY",
-					"currentLayer": 0,
-					"totalLayers": 255,
-					"currentFile": "",
-					"fileList": [
-						"some file.fhd",
-						"test.fhd",
-						"print.fhd",
-						"another file.fhd"
-					]
-				}
+				url: "", //	 "http://sparkmaker.local/",
+				spark: {},
+				selectedFile: ""
 
 			},
 			computed: {
 				percent() { 
 					return this.spark.totalLayers > 0 ? (this.spark.currentLayer / this.spark.totalLayers *100).toFixed(0) : '---' ; 
+				},
+				printable() {
+					return (this.spark.status=='STANDBY' || this.spark.status=='FINISHED') && (this.selectedFile!="");
 				},
 				statusText() {
 					switch (this.spark.status) {
@@ -127,6 +105,11 @@
 				}
 			},
 			mounted() {
+				// fetch initial status
+				this.update();
+
+				// periodic update
+				setInterval(this.update, 1000);
 			},
 			methods: {
 				indicator() {
@@ -134,33 +117,48 @@
 					if (this.spark.status=='PRINTING') return this.pause();
 					if (this.spark.status=='PAUSE') return this.resume();
 				},
-				connect() { fetch(this.url + "/connect"); },
-				disconnect() { fetch(this.url + "/disconnect"); },
+				connect() { fetch(this.url + "connect"); },
+				disconnect() { fetch(this.url + "disconnect"); },
 				update() {
-					fetch(this.url + "/status")
+					fetch(this.url + "status")
 						.then(response => response.json())
 						.then(json => {
-							this.statusResponse = json;
+							this.spark = json;
+
+							// force selected file during print
+							if ( this.spark.status!='STANDBY' && spark.status!='FINISHED' ) {
+								this.selectedFile = this.spark.currentFile;
+							}
+							// test if selected file is available
+							if ( this.spark.fileList.indexOf( this.selectedFile ) < 0 ||
+								this.spark.status=='DISCONNECTED' || this.spark.status=='CONNECTING' || this.spark.status=='NO_CARD' ) {
+									this.selectedFile = "";
+							}
+
 						})
 						.catch(err => {});
 				},
 				move(pos) {
 					var formData = new FormData();
 					formData.append("pos", pos);
-					fetch(this.url + "/move", { method: 'POST', body: formData });
+					fetch(this.url + "move", { method: 'POST', body: formData });
 				},
 				backlight(pwm) {
 					var formData = new FormData();
 					formData.append("cmd", "M106 S" + pwm + ";");
-					fetch(this.url + "/send", { method: 'POST', body: formData });
+					fetch(this.url + "send", { method: 'POST', body: formData });
 				},
-				home() { fetch(this.url + "/home");	},
-				emergency() { fetch(this.url + "/emergencyStop"); },
-				start() { fetch(this.url + "/print"); },
-				stop() { fetch(this.url + "/stop"); },
-				pause() { fetch(this.url + "/pause"); },
-				resume() { fetch(this.url + "/resume");	},
-				requestStatus() { fetch(this.url + "/requestStatus"); }
+				home() { fetch(this.url + "home");	},
+				emergency() { fetch(this.url + "emergencyStop"); },
+				start() { 
+					var formData = new FormData();
+					formData.append("file", this.selectedFile);
+					fetch(this.url + "print", { method: 'POST', body: formData });
+				},
+				stop() { fetch(this.url + "stop"); },
+				pause() { fetch(this.url + "pause"); },
+				resume() { fetch(this.url + "resume");	},
+				requestStatus() { fetch(this.url + "requestStatus"); }
 			}
 		})    
 	</script>

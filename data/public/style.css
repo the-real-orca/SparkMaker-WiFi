@@ -11,7 +11,7 @@ body {
 	position: relative;
 	cursor: default;
 	background: #E0E0E0;
-	background: linear-gradient(90deg, rgba(100,100,100,0.2) 0%, rgba(100,100,100,0.0) 25%,  rgba(100,100,100,0.0) 75%,  rgba(100,100,100,0.2) 100% );
+	background: linear-gradient(90deg, rgba(100,100,100,0.1) 0%, rgba(100,100,100,0.0) 25%,  rgba(100,100,100,0.0) 75%,  rgba(100,100,100,0.1) 100% );
 }
 
 .modal {
@@ -108,7 +108,7 @@ h2 {
 	background: linear-gradient(90deg, rgba(100,10,10,1) 0%, rgba(200,20,20,1) 100%);
 	text-align: center;
 	font-size: 150%;
-	color: #EEE;
+	color: #CCC;
 	text-shadow: 0.1em 0.1em 0.2em black;
 	padding-top: 1em;
 }
@@ -120,7 +120,7 @@ h2 {
 
 #percent {
 	margin: 0.1em;
-	font-size: 350%;
+	font-size: 300%;
 }
 
 #indicator {
@@ -163,7 +163,7 @@ h2 {
 	font-size: 115%;
 }
 
-.control select {
+.control .filename {
 	font-size: 100%;
 	border: 1px solid gray;
 	padding: 0.5em;
@@ -171,8 +171,6 @@ h2 {
 	min-width: 8em;
 }
 
-.control {
-}
 
 .control button {
 	font-size: 100%;

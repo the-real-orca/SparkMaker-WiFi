@@ -21,7 +21,7 @@ void handleStatus()
 	auto files = tempJson.createNestedArray("fileList");
 	for (auto const &file: spark.printer.filenames)
 	{
-		files.add(file.second);
+		files.add(file.first);
 	}
 	
 	// send json data

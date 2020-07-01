@@ -13,6 +13,6 @@
 		"openNet": ""
 	},
 	"SparkMaker": {
-		"statusRequestInterval": 30
+		"statusRequestInterval": 20
 	}
 }

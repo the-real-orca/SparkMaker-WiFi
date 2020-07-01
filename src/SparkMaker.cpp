@@ -13,7 +13,7 @@ extern DynamicJsonDocument config;
 // SparkMaker defaults
 const static struct
 {
-	uint16_t statusRequestInterval = 30;	// periodic status request [s]
+	uint16_t statusRequestInterval = 20;	// periodic status request [s]
 } defaultConfig;
 static unsigned long statusRequestInterval;
 
@@ -178,7 +178,7 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 			Serial.println(filename);
 
 			// add filename to file list
-			SparkMaker::printer.filenames.insert(std::pair<uint16_t, std::string>(id, filename));
+			SparkMaker::printer.filenames.insert(std::pair<std::string, uint16_t>(filename, id));
 		}
 		return;
 	}
@@ -200,6 +200,12 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	if (strcmp(buffer, "standby_sts") == 0)
 	{
 		Serial.println("STANDBY");
+
+		if ( SparkMaker::printer.status == NO_CARD )
+		{
+			// read SD Card
+			bleState = READ_FILES;
+		}
 		SparkMaker::printer.status = STANDBY;
 		return;
 	}
@@ -250,7 +256,7 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	{
 		Serial.println("NO_CARD");
 		SparkMaker::printer.status = NO_CARD;
-		// TODO
+		SparkMaker::printer.filenames.clear();
 		return;
 	}
 
@@ -405,8 +411,6 @@ void SparkMaker::setup()
  */
 void SparkMaker::loop()
 {
-	static std::string cmd;
-
 	switch (bleState)
 	{
 	case NA:
@@ -464,8 +468,7 @@ void SparkMaker::loop()
 		if ( txCharacteristic )
 		{
 			SparkMaker::printer.filenames.clear();
-			cmd = "scan-file\n";
-			txCharacteristic->writeValue(cmd);
+			txCharacteristic->writeValue("scan-file\n");
 			Serial.println("OK");
 			bleState = ONLINE;
 		}
@@ -523,7 +526,7 @@ void SparkMaker::disconnect()
 /**
  * send command
  */
-void SparkMaker::send(String cmd)
+void SparkMaker::send(const String &cmd)
 {
 	Serial.println("send command: "); Serial.println(cmd);
 	if ( txCharacteristic )
@@ -578,18 +581,30 @@ void SparkMaker::home()
 /**
  * start print
  */
-void SparkMaker::print(String filename)
+void SparkMaker::print(const String &filename)
 {
 	if ( printer.status == STANDBY || printer.status == FINISHED  )
 	{
+		if ( !txCharacteristic )
+			return;
+
+		Serial.print("select file: "); Serial.println(filename);
 		if ( !filename.isEmpty() )
 		{
-			// TODO select file to print
+			// search for filename
+			auto it = SparkMaker::printer.filenames.find(filename.c_str());
+			if ( it == SparkMaker::printer.filenames.end() )
+				return;
+			uint16_t id = it->second;
+			
+			// select file to print
+			String cmd = "file-" + String(id);
+			txCharacteristic->writeValue(cmd.c_str());
+			delay(100);
 		}
 
-		Serial.print("start printing");
-		if ( txCharacteristic )
-			txCharacteristic->writeValue("Start Printing;");
+		Serial.println("start printing");
+		txCharacteristic->writeValue("Start Printing;");
 	}
 }
 

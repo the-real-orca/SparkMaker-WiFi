@@ -39,7 +39,7 @@ typedef struct
 	std::string currentFile;
 	unsigned long heartbeat = 0;
 	unsigned long lastStatusRequest = 0;
-	std::map<uint16_t, std::string> filenames;
+	std::map<std::string, uint16_t> filenames;
 } Printer;
 
 class SparkMaker
@@ -50,9 +50,9 @@ class SparkMaker
 
 	static void connect();
 	static void disconnect();
-	static void send(String cmd);
+	static void send(const String &cmd);
 
-	static void print(String filename);
+	static void print(const String &filename);
 	static void stopPrint();
 	static void pausePrint();
 	static void resumePrint();

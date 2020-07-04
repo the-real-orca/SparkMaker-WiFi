@@ -1,0 +1,420 @@
+{
+    "source": "mockoon:1.8.0",
+    "data": [
+        {
+            "type": "environment",
+            "item": {
+                "uuid": "",
+                "lastMigration": 10,
+                "name": "SparkMaker FHD",
+                "endpointPrefix": "",
+                "latency": 500,
+                "port": 3001,
+                "routes": [
+                    {
+                        "uuid": "",
+                        "documentation": "get SparkMaker status",
+                        "method": "get",
+                        "endpoint": "status",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "{\r\n\t\"status\": \"STANDBY\",\r\n\t\"currentLayer\": 0,\r\n\t\"totalLayers\": 1000,\r\n\t\"currentFile\": \"\",\r\n\t\"fileList\": [\r\n\t\t\"some file.fhd\",\r\n\t\t\"test.fhd\",\r\n\t\t\"print.fhd\",\r\n\t\t\"another file.fhd\"\r\n\t]\r\n}",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "STANDBY",
+                                "headers": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            },
+                            {
+                                "uuid": "",
+                                "body": "{\r\n\t\"status\": \"CONNECTING\",\r\n\t\"currentLayer\": 0,\r\n\t\"totalLayers\": 0,\r\n\t\"currentFile\": \"\",\r\n\t\"fileList\": []\r\n}",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "CONNECTING",
+                                "headers": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/javascript"
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            },
+                            {
+                                "uuid": "",
+                                "body": "{\r\n\t\"status\": \"DISCONNECTED\",\r\n\t\"currentLayer\": 0,\r\n\t\"totalLayers\": 0,\r\n\t\"currentFile\": \"\",\r\n\t\"fileList\": []\r\n}",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "DISCONNECTED",
+                                "headers": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            },
+                            {
+                                "uuid": "",
+                                "body": "{\r\n\t\"status\": \"PRINTING\",\r\n\t\"currentLayer\": 300,\r\n\t\"totalLayers\": 1000,\r\n\t\"currentFile\": \"test.fhd\",\r\n\t\"fileList\": [\r\n\t\t\"some file.fhd\",\r\n\t\t\"test.fhd\",\r\n\t\t\"print.fhd\",\r\n\t\t\"another file.fhd\"\r\n\t]\r\n}",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "PRINTING",
+                                "headers": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "parameter: file",
+                        "method": "get",
+                        "endpoint": "print",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK \"{{ queryParam 'file'}}\"",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "parameter: file",
+                        "method": "post",
+                        "endpoint": "print",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "",
+                        "method": "get",
+                        "endpoint": "stop",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "",
+                        "method": "get",
+                        "endpoint": "pause",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "",
+                        "method": "get",
+                        "endpoint": "resume",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "",
+                        "method": "get",
+                        "endpoint": "emergencyStop",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "",
+                        "method": "get",
+                        "endpoint": "requestStatus",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "TODO",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "",
+                        "method": "get",
+                        "endpoint": "home",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "parameter: pos",
+                        "method": "get",
+                        "endpoint": "move",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "parameter: pos",
+                        "method": "post",
+                        "endpoint": "move",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "BLE connect to SparkMaker",
+                        "method": "get",
+                        "endpoint": "connect",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    },
+                    {
+                        "uuid": "",
+                        "documentation": "BLE disconnect from SparkMaker",
+                        "method": "get",
+                        "endpoint": "disconnect",
+                        "responses": [
+                            {
+                                "uuid": "",
+                                "body": "OK",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "",
+                                "headers": [
+                                    {
+                                        "key": "",
+                                        "value": ""
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            }
+                        ],
+                        "enabled": true
+                    }
+                ],
+                "proxyMode": false,
+                "proxyHost": "",
+                "https": false,
+                "cors": true,
+                "headers": [
+                    {
+                        "key": "Content-Type",
+                        "value": "text/plain"
+                    },
+                    {
+                        "key": "Access-Control-Allow-Origin",
+                        "value": "*"
+                    },
+                    {
+                        "key": "Access-Control-Allow-Methods",
+                        "value": "GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS"
+                    },
+                    {
+                        "key": "Access-Control-Allow-Headers",
+                        "value": "Content-Type, Origin, Accept, Authorization, Content-Length, X-Requested-With"
+                    }
+                ],
+                "proxyReqHeaders": [
+                    {
+                        "key": "",
+                        "value": ""
+                    }
+                ],
+                "proxyResHeaders": [
+                    {
+                        "key": "",
+                        "value": ""
+                    }
+                ]
+            }
+        }
+    ]
+}

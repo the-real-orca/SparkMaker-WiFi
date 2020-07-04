@@ -32,3 +32,4 @@
 *.app
 /.pio/build
 /.vscode/c_cpp_properties.json
+/data/public/MaterialDesign/Thumbs.db

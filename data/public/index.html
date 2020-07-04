@@ -20,7 +20,7 @@
 					</div>
 				</div>
 				<div id="printer-bottom" class="p-1">
-					<div id="indicator" :class="spark.status" @click="indicator"></div>
+					<div id="indicator" :class="[spark.status, {flash: waitStatusChange}]" @click="indicator"></div>
 					<div id="sd-slot"></div>
 					
 				</div>
@@ -28,21 +28,35 @@
 
 			<fieldset class="move center" :disabled="!(spark.status=='STANDBY'  || spark.status=='PAUSE' || spark.status=='FINISHED' || spark.status=='FILELIST' || spark.status=='NO_CARD')">
 				<legend>Z-Axis</legend>
-				<button @click="move(10)">+10</button><br>
-				<button @click="move(5)">+5</button><br>
+				<button @click="move(10)" title="move 10mm up">+10</button><br>
+				<button @click="move(5)" title="move 5mm up">+5</button><br>
 				<br>
-				<button @click="move(-5)">-5</button><br>
-				<button @click="move(-10)">-10</button><br>
+				<button @click="move(-5)" title="move 5mm down">-5</button><br>
+				<button @click="move(-10)" title="move 10mm down">-10</button><br>
 				<br>
-				<button @click="home" class="home">Home</button><br>
+				<button @click="home" class="home" title="home build plate">Home</button><br>
 			</fieldset>
 	
+			<fieldset class="commands center">
+				<button @click="connect" class="primary" v-if="spark.status=='DISCONNECTED'" title="enable BlueTooth">
+					<img src="MaterialDesign/baseline_bluetooth_disabled.png" alt="enable BlueTooth">
+				</button>
+				<button @click="disconnect" class=""  v-if="spark.status!='DISCONNECTED'" title="disable BlueTooth">
+					<img src="MaterialDesign/baseline_bluetooth.png" alt="disable BlueTooth">
+				</button>
+				<br>
+				<button @click="emergency" class="danger" title="Emergency Stop">
+					<img src="MaterialDesign/outline_stop.png" alt="Emergency Stop">
+				</button>				
+			</fieldset>
+
 		</div>
 
 		<fieldset class="control center">
 			<div class="fileselect">
 				<label>file:</label>
 				<select v-model="selectedFile" v-if="spark.status=='STANDBY' || spark.status=='FINISHED'"  class="filename">
+					<option disabled>- select file -</option>
 					<option v-for="file in spark.fileList">{{file}}</option>					
 				</select>
 				<span v-else class="filename">{{spark.currentFile}}</span>
@@ -66,9 +80,10 @@
 		var app = new Vue({
 			el: "#app",
 			data: {
-				url: "", //	 "http://sparkmaker.local/",
+				url: "http://127.0.0.1:3001/", // http://sparkmaker.local/",
 				spark: {},
-				selectedFile: ""
+				selectedFile: "",
+				waitStatusChange: true
 
 			},
 			computed: {
@@ -109,7 +124,7 @@
 				this.update();
 
 				// periodic update
-				setInterval(this.update, 1000);
+				setInterval(this.update, 2000);
 			},
 			methods: {
 				indicator() {
@@ -117,16 +132,17 @@
 					if (this.spark.status=='PRINTING') return this.pause();
 					if (this.spark.status=='PAUSE') return this.resume();
 				},
-				connect() { fetch(this.url + "connect"); },
-				disconnect() { fetch(this.url + "disconnect"); },
+				connect() { fetch(this.url + "connect"); this.waitStatusChange = true; },
+				disconnect() { fetch(this.url + "disconnect"); this.waitStatusChange = true; },
 				update() {
 					fetch(this.url + "status")
 						.then(response => response.json())
 						.then(json => {
+							var oldStatus = this.spark.status;
 							this.spark = json;
 
 							// force selected file during print
-							if ( this.spark.status!='STANDBY' && spark.status!='FINISHED' ) {
+							if ( this.spark.status!='STANDBY' && this.spark.status!='FINISHED' ) {
 								this.selectedFile = this.spark.currentFile;
 							}
 							// test if selected file is available
@@ -135,6 +151,11 @@
 									this.selectedFile = "";
 							}
 
+							// update status change
+							if ( oldStatus != this.spark.status )
+								this.waitStatusChange = false;
+							if ( this.spark.status == 'CONNECTING')
+								this.waitStatusChange = true;
 						})
 						.catch(err => {});
 				},
@@ -148,16 +169,17 @@
 					formData.append("cmd", "M106 S" + pwm + ";");
 					fetch(this.url + "send", { method: 'POST', body: formData });
 				},
-				home() { fetch(this.url + "home");	},
+				home() { fetch(this.url + "home"); },
 				emergency() { fetch(this.url + "emergencyStop"); },
 				start() { 
 					var formData = new FormData();
 					formData.append("file", this.selectedFile);
 					fetch(this.url + "print", { method: 'POST', body: formData });
+					this.waitStatusChange = true;
 				},
-				stop() { fetch(this.url + "stop"); },
-				pause() { fetch(this.url + "pause"); },
-				resume() { fetch(this.url + "resume");	},
+				stop() { fetch(this.url + "stop"); this.waitStatusChange = true; },
+				pause() { fetch(this.url + "pause"); this.waitStatusChange = true; },
+				resume() { fetch(this.url + "resume"); this.waitStatusChange = true; },
 				requestStatus() { fetch(this.url + "requestStatus"); }
 			}
 		})    

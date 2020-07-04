@@ -128,11 +128,12 @@ h2 {
 	width:2.5em; 
 	border-radius:50%; 
 	border-style: solid; 
+	border-color: whitesmoke;
 	margin: 0.5em auto; 
 	background: #333;
 	cursor: pointer;
 }
-@keyframes glow {50% {border-color:#000}}
+@keyframes glow {40% {border-color:#000}}
 @keyframes fadeOut {100% {opacity: 0}}
 @keyframes fadeIn {0% {opacity: 0}}
 
@@ -143,21 +144,17 @@ h2 {
 	margin: 0.5em auto;
 }
 
+.DISCONNECTED {border-color: gray !important;}
+.CONNECTING {border-color: yellow !important;}
+.STANDBY, .FILELIST, .FINISHED {border-color: green !important;}
+.PRINTING {border-color: red !important;}
+.PAUSE, .STOPPING { border-color: blue !important;}
+.NO_CARD {border-color: cyan !important;}
+.UPDATING {border-color: purple !important;}
 
-.DISCONNECTED {border-color: gray;}
-.CONNECTING {
-	border-color: lightblue;
-	animation: glow 2s infinite ease-in-out;
+.flash {
+	animation: glow 1.5s infinite;
 }
-.STANDBY, .FILELIST, .FINISHED {border-color: green;}
-.PRINTING {
-	border-color: red;
-	animation: glow 6s infinite ease-in-out;
-}
-.PAUSE, .STOPPING { border-color: blue; }
-.NO_CARD {border-color: cyan;}
-.UPDATING {border-color: purple;}
-
 
 .control {
 	font-size: 115%;
@@ -189,6 +186,12 @@ h2 {
 	padding: 0.5em;
 	margin: 0.2em;
 	width: 3em;
+}
+
+.commands {
+	position: absolute;
+	left: 0em;
+	top: 1em;
 }
 
 button.home {
@@ -242,6 +245,9 @@ button[disabled], .button[disabled], [disabled] button {
 
 button.primary, .button.primary, button.success, .button.success {
     background: #2ecc40;
+}
+button.danger, .button.danger {
+	background: #cc2020;
 }
 
 fieldset {

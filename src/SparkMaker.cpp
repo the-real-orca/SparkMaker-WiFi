@@ -422,6 +422,7 @@ void SparkMaker::loop()
 	default:
 		// scan for BLE devices
 		printer.status = DISCONNECTED;
+		SparkMaker::printer.filenames.clear();
 		Serial.println("scan BLE");
 		BLEDevice::getScan()->start(1);
 		break;
@@ -601,10 +602,12 @@ void SparkMaker::print(const String &filename)
 			String cmd = "file-" + String(id);
 			txCharacteristic->writeValue(cmd.c_str());
 			delay(100);
+
 		}
 
 		Serial.println("start printing");
 		txCharacteristic->writeValue("Start Printing;");
+		SparkMaker::printer.startTime = millis() / 1000;
 	}
 }
 

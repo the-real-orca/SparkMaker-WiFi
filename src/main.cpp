@@ -18,6 +18,11 @@ void handleStatus()
 	tempJson["currentLayer"] = spark.printer.currentLayer;
 	tempJson["totalLayers"] = spark.printer.totalLayers;
 	tempJson["currentFile"] = spark.printer.currentFile;
+	uint32_t time = millis() / 1000;
+	uint32_t printTime = time - spark.printer.startTime;
+	uint32_t estimatedTotalTime = printTime * spark.printer.totalLayers / spark.printer.currentLayer;
+	tempJson["printTime"] = printTime;
+	tempJson["estimatedTotalTime"] = estimatedTotalTime;
 	auto files = tempJson.createNestedArray("fileList");
 	for (auto const &file: spark.printer.filenames)
 	{

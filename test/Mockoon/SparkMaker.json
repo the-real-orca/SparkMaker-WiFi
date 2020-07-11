@@ -9,7 +9,7 @@
                 "name": "SparkMaker FHD",
                 "endpointPrefix": "",
                 "latency": 500,
-                "port": 3001,
+                "port": 3000,
                 "routes": [
                     {
                         "uuid": "",
@@ -17,6 +17,22 @@
                         "method": "get",
                         "endpoint": "status",
                         "responses": [
+                            {
+                                "uuid": "",
+                                "body": "{\r\n\t\"status\": \"PRINTING\",\r\n\t\"currentLayer\": 300,\r\n\t\"totalLayers\": 1000,\r\n\t\"printTime\": 90,\r\n\t\"estimatedTotalTime\": 3000,\r\n\t\"currentFile\": \"test.fhd\",\r\n\t\"fileList\": [\r\n\t\t\"some file.fhd\",\r\n\t\t\"test.fhd\",\r\n\t\t\"print.fhd\",\r\n\t\t\"another file.fhd\"\r\n\t]\r\n}",
+                                "latency": 0,
+                                "statusCode": "200",
+                                "label": "PRINTING",
+                                "headers": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "filePath": "",
+                                "sendFileAsBody": false,
+                                "rules": []
+                            },
                             {
                                 "uuid": "",
                                 "body": "{\r\n\t\"status\": \"STANDBY\",\r\n\t\"currentLayer\": 0,\r\n\t\"totalLayers\": 1000,\r\n\t\"currentFile\": \"\",\r\n\t\"fileList\": [\r\n\t\t\"some file.fhd\",\r\n\t\t\"test.fhd\",\r\n\t\t\"print.fhd\",\r\n\t\t\"another file.fhd\"\r\n\t]\r\n}",
@@ -55,22 +71,6 @@
                                 "latency": 0,
                                 "statusCode": "200",
                                 "label": "DISCONNECTED",
-                                "headers": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    }
-                                ],
-                                "filePath": "",
-                                "sendFileAsBody": false,
-                                "rules": []
-                            },
-                            {
-                                "uuid": "",
-                                "body": "{\r\n\t\"status\": \"PRINTING\",\r\n\t\"currentLayer\": 300,\r\n\t\"totalLayers\": 1000,\r\n\t\"currentFile\": \"test.fhd\",\r\n\t\"fileList\": [\r\n\t\t\"some file.fhd\",\r\n\t\t\"test.fhd\",\r\n\t\t\"print.fhd\",\r\n\t\t\"another file.fhd\"\r\n\t]\r\n}",
-                                "latency": 0,
-                                "statusCode": "200",
-                                "label": "PRINTING",
                                 "headers": [
                                     {
                                         "key": "Content-Type",

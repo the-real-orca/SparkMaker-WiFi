@@ -36,6 +36,7 @@ typedef struct
 	PRINTERSTATUS status = DISCONNECTED;
 	int32_t currentLayer = 0;
 	int32_t totalLayers = 0;
+	uint32_t startTime = 0;
 	std::string currentFile;
 	unsigned long heartbeat = 0;
 	unsigned long lastStatusRequest = 0;

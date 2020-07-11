@@ -93,21 +93,25 @@ h2 {
 	border-bottom-left-radius: 50% 5%;
 	background: linear-gradient(90deg, rgba(50,50,50,1) 0%, rgba(10,10,10,1) 100%);
 	margin: 3em auto;
-	height:22em;
-	width:13em;
+	height:25em;
+	width:15em;
 	animation: fadeIn 2s;
 	box-shadow: -5px 5px 45px #0009;
 }
 
 #printer-top {
+	display: flex;
+	flex-direction: column;	
+    align-items: center;
+    justify-content: center;
+	text-align: center;
 	height: 70%;
 	border-top-right-radius: 50% 5%;
 	border-top-left-radius: 50% 5%;
 	border-bottom-right-radius: 50% 5%; 
 	border-bottom-left-radius: 50% 5%;
 	background: linear-gradient(90deg, rgba(100,10,10,1) 0%, rgba(200,20,20,1) 100%);
-	text-align: center;
-	font-size: 150%;
+	font-size: 110%;
 	color: #CCC;
 	text-shadow: 0.1em 0.1em 0.2em black;
 	padding-top: 1em;
@@ -115,11 +119,11 @@ h2 {
 
 #status {
 	font-weight: bold;
-	margin: 1em;
+	font-size: 150%;	
 }
 
 #percent {
-	margin: 0.1em;
+	margin: 0.5em;
 	font-size: 300%;
 }
 
@@ -128,7 +132,6 @@ h2 {
 	width:2.5em; 
 	border-radius:50%; 
 	border-style: solid; 
-	border-color: whitesmoke;
 	margin: 0.5em auto; 
 	background: #333;
 	cursor: pointer;
@@ -144,16 +147,16 @@ h2 {
 	margin: 0.5em auto;
 }
 
-.DISCONNECTED {border-color: gray !important;}
-.CONNECTING {border-color: yellow !important;}
-.STANDBY, .FILELIST, .FINISHED {border-color: green !important;}
-.PRINTING {border-color: red !important;}
-.PAUSE, .STOPPING { border-color: blue !important;}
-.NO_CARD {border-color: cyan !important;}
-.UPDATING {border-color: purple !important;}
+.DISCONNECTED {border-color: gray;}
+.CONNECTING {border-color: yellow;}
+.STANDBY, .FILELIST, .FINISHED {border-color: green;}
+.PRINTING {border-color: red;}
+.PAUSE, .STOPPING { border-color: blue;}
+.NO_CARD {border-color: cyan;}
+.UPDATING {border-color: purple;}
 
 .flash {
-	animation: glow 1.5s infinite;
+	animation: glow 1.5s infinite ease-in-out;
 }
 
 .control {
@@ -198,10 +201,14 @@ button.home {
 	width: 4em;
 }
 
+.fileselect {
+	margin: 1em;
+}
+
 label {
 	display: inline-block;
 	font-style: italic;
-	margin: 0.5em;
+	margin: 0.2em;
 }
 
 

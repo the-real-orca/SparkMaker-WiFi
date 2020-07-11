@@ -16,7 +16,9 @@
 					<div id="status">{{statusText}}</div>
 					<div v-if="spark.status=='PRINTING' || spark.status=='PAUSE' || spark.status=='FINISHED'">
 						<div id="percent">{{percent}}%</div>
-						<div id="layer">({{spark.currentLayer}} / {{spark.totalLayers}})</div>
+						<div id ="remainingTime"><label>time left:</label> {{remainingTime | time}}</div>
+						<div id ="totalTime"><label>time total:</label> {{estimatedTotalTime | time}}</div>
+						<div id="layer"><label>layer:</label> {{spark.currentLayer}} / {{spark.totalLayers}}</div>
 					</div>
 				</div>
 				<div id="printer-bottom" class="p-1">
@@ -39,14 +41,14 @@
 	
 			<fieldset class="commands center">
 				<button @click="connect" class="primary" v-if="spark.status=='DISCONNECTED'" title="enable BlueTooth">
-					<img src="MaterialDesign/baseline_bluetooth_disabled.png" alt="enable BlueTooth">
+					<img src="img/no_bt.png" alt="enable BlueTooth">
 				</button>
 				<button @click="disconnect" class=""  v-if="spark.status!='DISCONNECTED'" title="disable BlueTooth">
-					<img src="MaterialDesign/baseline_bluetooth.png" alt="disable BlueTooth">
+					<img src="img/bt.png" alt="disable BlueTooth">
 				</button>
 				<br>
 				<button @click="emergency" class="danger" title="Emergency Stop">
-					<img src="MaterialDesign/outline_stop.png" alt="Emergency Stop">
+					<img src="img/stop.png" alt="Emergency Stop">
 				</button>				
 			</fieldset>
 
@@ -55,9 +57,9 @@
 		<fieldset class="control center">
 			<div class="fileselect">
 				<label>file:</label>
-				<select v-model="selectedFile" v-if="spark.status=='STANDBY' || spark.status=='FINISHED'"  class="filename">
-					<option disabled>- select file -</option>
-					<option v-for="file in spark.fileList">{{file}}</option>					
+					<select v-model="selectedFile" v-if="spark.status=='STANDBY' || spark.status=='FINISHED'" class="filename">
+						<option selected disabled value="">- select file -</option>
+						<option v-for="file in spark.fileList">{{file}}</option>
 				</select>
 				<span v-else class="filename">{{spark.currentFile}}</span>
 			</div>
@@ -80,7 +82,7 @@
 		var app = new Vue({
 			el: "#app",
 			data: {
-				url: "http://127.0.0.1:3001/", // http://sparkmaker.local/",
+				url: "http://127.0.0.1:3000/", // http://sparkmaker.local/",
 				spark: {},
 				selectedFile: "",
 				waitStatusChange: true
@@ -117,6 +119,19 @@
 							return "updating";			
 					}
 
+				},
+				estimatedTotalTime() {
+					if ( this.spark.estimatedTotalTime > 0 )
+						return this.spark.estimatedTotalTime;
+					else
+						return 0;
+				},
+				remainingTime() {
+					var remaining = this.spark.estimatedTotalTime - this.spark.printTime;
+					if ( remaining > 0 && this.spark.currentLayer > 5 )
+						return remaining;
+					else
+						return 0;
 				}
 			},
 			mounted() {
@@ -181,6 +196,17 @@
 				pause() { fetch(this.url + "pause"); this.waitStatusChange = true; },
 				resume() { fetch(this.url + "resume"); this.waitStatusChange = true; },
 				requestStatus() { fetch(this.url + "requestStatus"); }
+			},
+			filters: {
+				time: function (value) {
+					if ( value > 0 ) {
+						var h = Math.floor(value / 60);
+						var m = value % 60;
+						return h + "h " + m + "m";
+					} else {
+						return "---"
+					}
+				}
 			}
 		})    
 	</script>

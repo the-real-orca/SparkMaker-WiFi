@@ -6,16 +6,30 @@
 
 const JsonObject JsonObjectNull;
 
-bool loadConfig(DynamicJsonDocument &configJson, const String &filename)
+static void merge(JsonVariant dst, JsonVariantConst src)
+{
+  if (src.is<JsonObject>())
+  {
+    for (auto kvp : src.as<JsonObject>())
+    {
+      merge(dst.getOrAddMember(kvp.key()), kvp.value());
+    }
+  }
+  else
+  {
+    dst.set(src);
+  }
+}
+
+bool loadConfig(DynamicJsonDocument &configJson, const String &filename, JsonObject mergeObj)
 {
 	Serial.println("loadConfig:");
-	configJson.clear();
 
 	// handle config file
 	File configFile = SPIFFS.open(filename, FILE_READ);
 	if (!configFile)
 	{
-		Serial.println("Failed to open config file");
+		Serial.print("Failed to open config file: "); Serial.println(filename);
 		return false;
 	}
 
@@ -27,6 +41,12 @@ bool loadConfig(DynamicJsonDocument &configJson, const String &filename)
 		configFile.close();
 		return false;
 	}
+	if (!size)
+	{
+		Serial.print("Failed to read config file: "); Serial.println(filename);
+		configFile.close();
+		return false;
+	}
 
 	// parse JSON
 	DeserializationError error = deserializeJson(configJson, configFile);
@@ -34,14 +54,14 @@ bool loadConfig(DynamicJsonDocument &configJson, const String &filename)
 	if (error)
 	{
 		Serial.println("Failed to parse config file");
-		configJson.clear();
 		return false;
 	}
 
-	// TODO remove debug output
-	Serial.print("JSON load: ");
-	serializeJsonPretty(configJson, Serial);
-	Serial.println();
+	// merge to destination object
+	if ( !mergeObj.isNull() )
+	{
+		merge(mergeObj, configJson);
+	}
 
 	return true;
 }

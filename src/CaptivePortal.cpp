@@ -533,6 +533,19 @@ void CaptivePortal::setup()
 
 	loadConfig(config);
 
+	// TODO remove debug output
+	Serial.print("config: ");
+	serializeJsonPretty(config, Serial);
+	Serial.println();
+
+	loadConfig(tempJson, "/private.json", config.as<JsonObject>()); // overwrite with private config
+
+	// TODO remove debug output
+	Serial.print("private: ");
+	serializeJsonPretty(config, Serial);
+	Serial.println();
+
+
 	// sanity check for config
 	if (!config["hostname"])
 		config["hostname"] = defaultConfig.hostname;

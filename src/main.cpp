@@ -82,7 +82,6 @@ void setup()
 	}
 	Serial.println("\nSparkMaker BLE to WiFi interface");
 
-	//  JsonObject config = loadConfig();
 	captivePortal.setup();
 
 	// custom pages

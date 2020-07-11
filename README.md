@@ -24,15 +24,17 @@ Hardware
 
 Installation
 ------------
-- install VSCode with PlatformIO add ESP32 support
-- open the project in VSCode
-- upload the SPIFFS Image to your board (PIO -> Upload File System image)
-- compile and upload the application (PIO -> Upload)
-- optional: open a serial terminal and monitor the output
-- connect your mobile phone to *SparkMaker* WiFi network
-- open the captive portal (192.168.4.1, if not opened automatically)
-- set and connect to your local WiFi
-- open the SparkMaker Web application: http://sparkmaker.local
+1. install VSCode with PlatformIO add ESP32 support
+2. open the project in VSCode
+3. upload the SPIFFS Image to your board (PIO -> Upload File System image)
+4. compile and upload the application (PIO -> Upload)
+5. optional: open a serial terminal and monitor the output
+6. connect your mobile phone to *SparkMaker* WiFi network
+7. open the captive portal (192.168.4.1, if not opened automatically)
+8. set and connect to your local WiFi
+9. open the SparkMaker Web application: http://sparkmaker.local
+
+- You can also create a *private.json* file with your network credentials, using the same layout as *config.json*, in the *data* folder and add your private network credentials to this file. *private.json* will overwrite the settings from *config.json* but will not be uploaded to the repository.
 
 
 Acknowledgments

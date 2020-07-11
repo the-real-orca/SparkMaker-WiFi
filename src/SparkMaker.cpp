@@ -247,7 +247,7 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	{
 		Serial.println("FINISHED");
 		SparkMaker::printer.status = FINISHED;
-		// TODO
+		SparkMaker::printer.finishTime = millis() / 1000;
 		return;
 	}
 
@@ -508,8 +508,6 @@ void SparkMaker::connect()
 {
 	disconnectBLE();
 	
-// TODO
-
 	// start BLE scanning
 	bleState = SCANNING;
 	SparkMaker::printer.status = DISCONNECTED;	
@@ -608,6 +606,7 @@ void SparkMaker::print(const String &filename)
 		Serial.println("start printing");
 		txCharacteristic->writeValue("Start Printing;");
 		SparkMaker::printer.startTime = millis() / 1000;
+		SparkMaker::printer.finishTime = 0;
 	}
 }
 

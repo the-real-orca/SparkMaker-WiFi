@@ -30,6 +30,9 @@
 *.a
 *.lib
 
+# Private files
+data/private.json
+
 # Executables
 *.exe
 *.out

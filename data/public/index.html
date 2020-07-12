@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="style.css">
-	<script src="js/vue.js"></script>
+<!-- TODO	<script src="js/vue.min.js"></script> -->
 	<title>SparkMaker WiFi Interface</title>
 </head>
 <body>
@@ -82,7 +82,7 @@
 		var app = new Vue({
 			el: "#app",
 			data: {
-				url: "http://127.0.0.1:3000/", // http://sparkmaker.local/",
+				url: "", // http://sparkmaker.local/",
 				spark: {},
 				selectedFile: "",
 				waitStatusChange: true

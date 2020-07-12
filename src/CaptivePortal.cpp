@@ -21,7 +21,7 @@ DNSServer _dnsServer;
 
 // Web
 static const byte HTTP_PORT = 80;
-WebServer _httpServer(HTTP_PORT);
+AsyncWebServer _httpServer(HTTP_PORT);
 
 // JSON
 DynamicJsonDocument config(configJsonSize);
@@ -164,10 +164,10 @@ void connectWiFiClient(String ssid, String pwd)
  * 
  * @return: true if handled
  */
-static boolean isCaptiveRequest()
+static boolean isCaptiveRequest(AsyncWebServerRequest *request)
 {
 	// test for local requests
-	String host = _httpServer.hostHeader();
+	String host = request->host();
 	if (host == WiFi.softAPIP().toString())
 	{
 		// request to access point IP
@@ -192,14 +192,12 @@ static boolean isCaptiveRequest()
 /**
  * handle captive portal requests
  */
-static void handleCaptiveRequest()
+static void handleCaptiveRequest(AsyncWebServerRequest *request)
 {
 	// redirect
 	Serial.println("request captured and redirected");
 	String portalPath = config["CaptivePortal"]["path"] | defaultConfig.portalPath;
-	_httpServer.sendHeader("Location", "http://" + config["hostname"].as<String>() + ".local/" + portalPath, true);
-	_httpServer.send(302, "text/html", "");
-	_httpServer.client().stop();
+	request->redirect("http://" + config["hostname"].as<String>() + ".local/" + portalPath);
 }
 
 /**
@@ -239,7 +237,7 @@ static String getContentType(String filename)
  * 
  * @return true if file exist and was sent
  */
-static bool handleFile(String path)
+static bool handleFile(AsyncWebServerRequest *request, String path)
 {
 	Serial.println("handleFile: " + path);
 
@@ -267,57 +265,60 @@ static bool handleFile(String path)
 			path = pathCompressed;
 
 		// send file
-		File file = SPIFFS.open(path, "r");
-		_httpServer.streamFile(file, contentType);
-		file.close();
-
+// TODO send file in chuncks, save RAM to avoid crashes ???
+		auto file = SPIFFS.open(path);
+		AsyncWebServerResponse *response = request->beginResponse(file, path, contentType);
+		if (foundCompressed)
+			response->addHeader("Content-Encoding", "gzip");
+		request->send(response);
 		Serial.println(String("Sent file: ") + path);
 		return true;
 	}
 
-	Serial.println(String("\tFile Not Found: ") + path);
+	Serial.println(String("File Not Found: ") + path);
 	return false;
 }
 
 /**
  * handle HTTP generic request
  */
-static void handleGenericHTTP()
+static void handleGenericHTTP(AsyncWebServerRequest *request)
 {
 	// test for captive portal request
-	if (isCaptiveRequest())
+	if ( isCaptiveRequest(request) )
 	{
-		handleCaptiveRequest();
+		handleCaptiveRequest(request);
 		return;
 	}
 
 	// load from SPIFFS
-	if (handleFile(_httpServer.uri()))
+	if (handleFile(request, request->url()))
 		return;
 
 	// send not found page
 	Serial.print("handleNotFound: ");
-	Serial.print(_httpServer.hostHeader());
-	Serial.println(_httpServer.uri());
+	Serial.print(request->host());
+	Serial.println(request->url());
 
-	// HTML Header
-	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-	_httpServer.sendHeader("Pragma", "no-cache");
-	_httpServer.sendHeader("Expires", "-1");
-	_httpServer.setContentLength(CONTENT_LENGTH_UNKNOWN);
 	// HTML Content
 	static String html;
 	html = "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>" + config["hostname"].as<String>() + "</title></head><body>";
-	html += "<i>" + _httpServer.uri() + "</i> not found";
+	html += "<i>" + request->url() + "</i> not found";
 	html += "</body></html>";
-	_httpServer.send(404, "text/html", html);
-	_httpServer.client().stop();
+	AsyncWebServerResponse *response = request->beginResponse(404, "text/html", "Hello World!");
+
+	// HTML Header
+	response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+	response->addHeader("Pragma", "no-cache");
+	response->addHeader("Expires", "-1");
+	request->send(response);
 }
+
 
 /**
  * handle info request
  */
-static void handleInfo()
+static void handleInfo(AsyncWebServerRequest *request)
 {
 	Serial.println("send info");
 
@@ -334,9 +335,7 @@ static void handleInfo()
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
-	_httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-	_httpServer.send(200, "application/json", content);
-	_httpServer.client().stop();
+	request->send(200, "application/json", content);
 }
 
 /**
@@ -356,7 +355,7 @@ const char *encryptionTypeNames[] = {
 /**
  * perform WiFi scan and send detected networks
  */
-static void handleWifiScan()
+static void handleWifiScan(AsyncWebServerRequest *request)
 {
 	Serial.print("WiFi scan: ... ");
 
@@ -405,19 +404,17 @@ static void handleWifiScan()
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
-	_httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-	_httpServer.send(200, "application/json", content);
-	_httpServer.client().stop();
+	request->send(200, "application/json", content);
 	Serial.println(content);
 }
 
 /**
  * add AP to known networks
  */
-static void handleWifiAdd()
+static void handleWifiAdd(AsyncWebServerRequest *request)
 {
-	String ssid = sanity(_httpServer.arg("ssid"));
-	String pwd = sanity(_httpServer.arg("pwd"));
+	String ssid = sanity(request->arg("ssid"));
+	String pwd = sanity(request->arg("pwd"));
 	Serial.print("add '" + ssid + "' to known networks list");
 
 	auto credentials = config["Credentials"].as<JsonObject>();
@@ -425,9 +422,7 @@ static void handleWifiAdd()
 	saveConfig(config);
 
 	// send reply
-	_httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-	_httpServer.send(200, "application/json", "{\"status\": \"OK\"}");
-	_httpServer.client().stop();
+	request->send(200, "application/json", "{\"status\": \"OK\"}");
 
 	// connect to WiFi
 	if (ssid != WiFi.SSID())
@@ -440,9 +435,9 @@ static void handleWifiAdd()
 /**
  * remove AP from known networks
  */
-static void handleWifiDel()
+static void handleWifiDel(AsyncWebServerRequest *request)
 {
-	String ssid = _httpServer.arg("ssid");
+	String ssid = request->arg("ssid");
 	Serial.print("remove '" + ssid + "' from known networks list: ... ");
 
 	bool reconnect = (ssid == WiFi.SSID());
@@ -451,9 +446,7 @@ static void handleWifiDel()
 	saveConfig(config);
 
 	// send reply
-	_httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-	_httpServer.send(200, "application/json", "{\"status\": \"OK\"}");
-	_httpServer.client().stop();
+	request->send(200, "application/json", "{\"status\": \"OK\"}");
 
 	// connect to WiFi
 	if (reconnect)
@@ -466,25 +459,26 @@ static void handleWifiDel()
 /**
  * update host name
  */
-static void handleUpdateHostname()
+static void handleUpdateHostname(AsyncWebServerRequest *request)
 {
-	String hostname = sanity(_httpServer.arg("hostname"));
+	String hostname = sanity(request->arg("hostname"));
 
 	// update hostname
 	if (!hostname.length())
 	{
 		// nothing to do, just send summary
-		return handleInfo();
+		return handleInfo(request);
 	}
 	config["hostname"] = hostname;
 	saveConfig(config);
 
 	// answer with updated info
-	handleInfo();
+	handleInfo(request);
 
 	// re-start AP
 	startCaptiveAP();
 }
+
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 {
@@ -525,10 +519,12 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 	}
 }
 
+
 void CaptivePortal::setup()
 {
 	// file system
-	SPIFFS.begin(true); // format filesystem if failed
+// FIX number of files limited	
+	SPIFFS.begin(true, "", 2); // format filesystem if failed
 	listDir(SPIFFS, "/", 0);
 
 	// load config
@@ -558,6 +554,8 @@ void CaptivePortal::setup()
 
 	// setup HTTP server
 	Serial.print("Start WebServer ... ");
+	DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");	// enable CORS
+
 	_httpServer.on("/c/info", handleInfo);				 // send status info
 	_httpServer.on("/c/hostname", handleUpdateHostname); // update
 	_httpServer.on("/c/scan", handleWifiScan);			 // scan active WiFi networks
@@ -566,6 +564,8 @@ void CaptivePortal::setup()
 
 	_httpServer.on("/generate_204", handleCaptiveRequest); // Android captive portal.
 	_httpServer.on("/fwlink", handleCaptiveRequest);	   // Microsoft captive portal.
+
+// FIX	_httpServer.serveStatic("/", SPIFFS, "/public/");	// handle static files
 
 	// generic not found
 	_httpServer.onNotFound(handleGenericHTTP);
@@ -582,43 +582,24 @@ void CaptivePortal::loop()
 {
 	//DNS
 	_dnsServer.processNextRequest();
-
-	//HTTP
-	_httpServer.handleClient();
 }
 
 /*******************************************************************************************************************************
  * WebServer wrapper functions
  */
-WebServer &CaptivePortal::getHttpServer()
+AsyncWebServer &CaptivePortal::getHttpServer()
 {
 	return _httpServer;
 }
-void CaptivePortal::on(const String &uri, WebServer::THandlerFunction handler)
+void CaptivePortal::on(const String &uri, ArRequestHandlerFunction handler)
 {
-	_httpServer.on(uri, handler);
+	_httpServer.on(uri.c_str(), handler);
 }
-void CaptivePortal::on(const String &uri, HTTPMethod method, WebServer::THandlerFunction handler)
+void CaptivePortal::on(const String &uri, WebRequestMethodComposite method, ArRequestHandlerFunction handler)
 {
-	_httpServer.on(uri, method, handler);
+	_httpServer.on(uri.c_str(), method, handler);
 }
-void CaptivePortal::on(const String &uri, HTTPMethod method, WebServer::THandlerFunction handler, WebServer::THandlerFunction ufn)
+void CaptivePortal::on(const String &uri, WebRequestMethodComposite method, ArRequestHandlerFunction handler, ArUploadHandlerFunction ufn)
 {
-	_httpServer.on(uri, method, handler, ufn);
-}
-void CaptivePortal::sendHeader(const String &name, const String &value, bool first)
-{
-	_httpServer.sendHeader(name, value, first);
-}
-void CaptivePortal::sendFinal(int code, char *content_type, const String &content)
-{
-	_httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-	_httpServer.send(code, content_type, content);
-	_httpServer.client().stop();
-}
-void CaptivePortal::sendFinal(int code, const String &content_type, const String &content)
-{
-	_httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-	_httpServer.send(code, content_type, content);
-	_httpServer.client().stop();
+	_httpServer.on(uri.c_str(), method, handler, ufn);
 }

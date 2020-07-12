@@ -323,6 +323,8 @@ bool disconnectBLE()
 	rxCharacteristic = NULL;
 
 	bleState = OFFLINE;
+	
+	return true;
 }
 
 /**
@@ -391,6 +393,9 @@ void SparkMaker::setup()
 	// start Bluetooth Low Energy
 	BLEDevice::init(config["hostname"]);
 
+// TODO disabled minimize code for crash analysis
+#if 0 
+
 	// parse config
 	statusRequestInterval = ( config["SparkMaker"]["statusRequestInterval"] | defaultConfig.statusRequestInterval ) * 1000;
 
@@ -400,6 +405,7 @@ void SparkMaker::setup()
 	pBLEScan->setInterval(1000);
 	pBLEScan->setWindow(500);
 	pBLEScan->setActiveScan(true);
+#endif
 
 	// SparkMaker state handling
 	bleState = SCANNING;
@@ -411,6 +417,8 @@ void SparkMaker::setup()
  */
 void SparkMaker::loop()
 {
+// TODO disabled minimize code for crash analysis
+#if 0 	
 	switch (bleState)
 	{
 	case NA:
@@ -498,7 +506,7 @@ void SparkMaker::loop()
 			}
 		}
 	}
-
+#endif
 }
 
 /**

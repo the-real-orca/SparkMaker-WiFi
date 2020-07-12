@@ -38,5 +38,6 @@ data/private.json
 *.out
 *.app
 /.pio/build
+/.pio/libdeps
 /.vscode/c_cpp_properties.json
 Thumbs.db

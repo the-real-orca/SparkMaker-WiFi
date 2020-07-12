@@ -11,7 +11,10 @@ CaptivePortal captivePortal;
 #include "SparkMaker.h"
 SparkMaker spark;
 
-void handleStatus()
+// TODO disabled minimize code for crash analysis
+#if 0
+
+void handleStatus(AsyncWebServerRequest *request)
 {
 	tempJson.clear();
 	tempJson["status"] = statusNames[spark.printer.status];
@@ -32,46 +35,38 @@ void handleStatus()
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
-	captivePortal.sendFinal(200, "application/json", content);
+	request->send(200, "application/json", content);
 	Serial.println(content);
 }
 
-void handleCmdDisconnect()
+void handleCmdDisconnect(AsyncWebServerRequest *request)
 {
 	spark.disconnect();
-	handleStatus();
+	handleStatus(request);
 }
 
-void handleCmdConnect()
+void handleCmdConnect(AsyncWebServerRequest *request)
 {
 	spark.connect();
-	handleStatus();
+	handleStatus(request);
 }
 
-void handleCmdPrint()
+void handleCmdPrint(AsyncWebServerRequest *request)
 {
-	String file = captivePortal.getHttpServer().arg("file");
+	String file = request->arg("file");
 	spark.print(file);
-	captivePortal.sendFinal(200, "text/plain", "OK");
+	request->send(200, "text/plain", "OK");
 }
 
-void handleCmdMove()
+void handleCmdMove(AsyncWebServerRequest *request)
 {
-	int16_t pos = captivePortal.getHttpServer().arg("pos").toInt();
+	int16_t pos = request->arg("pos").toInt();
 	if ( pos )
 		spark.move(pos);
-	captivePortal.sendFinal(200, "text/plain", "OK");
+	request->send(200, "text/plain", "OK");
 }
 
-/**
- * debug interfact to send direct commands
- */
-static void handleCmdSend() // HACK
-{
-	String cmd = captivePortal.getHttpServer().arg("cmd");
-	spark.send(cmd);
-	captivePortal.sendFinal(200, "text/plain", "OK");
-}
+#endif
 
 void setup()
 {
@@ -82,34 +77,37 @@ void setup()
 	}
 	Serial.println("\nSparkMaker BLE to WiFi interface");
 
+	spark.setup();
+
 	captivePortal.setup();
 
 	// custom pages
+// TODO disabled minimize code for crash analysis
+#if 0
 	captivePortal.on("/status", handleStatus);
 	captivePortal.on("/print", handleCmdPrint);
 
-	captivePortal.on("/stop", [](){ spark.stopPrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
-	captivePortal.on("/pause", [](){ spark.pausePrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
-	captivePortal.on("/resume", [](){ spark.resumePrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
-	captivePortal.on("/emergencyStop", [](){ spark.emergencyStop(); captivePortal.sendFinal(200, "text/plain", "OK"); });
-	captivePortal.on("/requestStatus", [](){ spark.requestStatus(); captivePortal.sendFinal(200, "text/plain", "OK"); });
-	captivePortal.on("/home", [](){ spark.home(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/stop", [](AsyncWebServerRequest *request){ spark.stopPrint(); request->send(200, "text/plain", "OK"); });
+	captivePortal.on("/pause", [](AsyncWebServerRequest *request){ spark.pausePrint(); request->send(200, "text/plain", "OK"); });
+	captivePortal.on("/resume", [](AsyncWebServerRequest *request){ spark.resumePrint(); request->send(200, "text/plain", "OK"); });
+	captivePortal.on("/emergencyStop", [](AsyncWebServerRequest *request){ spark.emergencyStop(); request->send(200, "text/plain", "OK"); });
+	captivePortal.on("/requestStatus", [](AsyncWebServerRequest *request){ spark.requestStatus(); request->send(200, "text/plain", "OK"); });
+	captivePortal.on("/home", [](AsyncWebServerRequest *request){ spark.home(); request->send(200, "text/plain", "OK"); });
 	captivePortal.on("/move", handleCmdMove);
 
 
 	captivePortal.on("/send", handleCmdSend);
 	captivePortal.on("/connect", handleCmdConnect);
 	captivePortal.on("/disconnect", handleCmdDisconnect);
+#endif
 
 	captivePortal.begin();
 
-	Serial.println("Captive Portal started!");
-
-	spark.setup();
+	Serial.println("Sparkmaker WiFi started!");
 }
 
 void loop()
 {
 	captivePortal.loop();
-	spark.loop();
+// TODO	spark.loop();
 }

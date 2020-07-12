@@ -6,7 +6,6 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WebServer.h>
 #include <ESPmDNS.h>
 #include <DNSServer.h>
 #include <ArduinoJson.h>

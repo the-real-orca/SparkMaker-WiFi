@@ -23,7 +23,7 @@ static void merge(JsonVariant dst, JsonVariantConst src)
 
 bool loadConfig(DynamicJsonDocument &configJson, const String &filename, JsonObject mergeObj)
 {
-	Serial.println("loadConfig:");
+	Serial.print("loadConfig:");	Serial.println(filename);
 
 	// handle config file
 	File configFile = SPIFFS.open(filename, FILE_READ);

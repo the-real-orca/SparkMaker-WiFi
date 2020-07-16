@@ -18,10 +18,12 @@ static inline uint32_t ESP_getChipId() { return (uint32_t)ESP.getEfuseMac(); }
 // DNS _httpServer
 static const byte DNS_PORT = 53;
 DNSServer _dnsServer;
+static bool _dnsServerActive = false;
 
 // Web
 static const byte HTTP_PORT = 80;
 AsyncWebServer _httpServer(HTTP_PORT);
+const size_t _fileBufferSize  = 1024;
 
 // JSON
 DynamicJsonDocument config(configJsonSize);
@@ -57,6 +59,7 @@ String sanity(const String _str)
 void startCaptiveAP()
 {
 	Serial.print("Start WiFi AP: " + config["hostname"].as<String>() + " ... ");
+	WiFi.softAPdisconnect(true);
 
 	IPAddress softAP_IP(defaultConfig.softAP_IP);
 	if (config["CaptivePortal"]["ip"].is<const char *>())
@@ -64,9 +67,6 @@ void startCaptiveAP()
 	IPAddress subnet(defaultConfig.subnet);
 	if (config["CaptivePortal"]["subnet"].is<const char *>())
 		subnet.fromString(config["CaptivePortal"]["subnet"].as<const char *>());
-
-	WiFi.softAPdisconnect(true);
-	WiFi.setHostname(config["hostname"]);
 
 	// create WiFi AP
 	WiFi.softAPConfig(softAP_IP, softAP_IP, subnet);
@@ -77,19 +77,8 @@ void startCaptiveAP()
 	Serial.print("Start DNS ... ");
 	_dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 	_dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+	_dnsServerActive = true;
 	Serial.println("OK");
-
-	// enable mDNS
-	Serial.print("Start mDNS ... ");
-	if (MDNS.begin(config["hostname"]))
-	{
-		MDNS.addService("http", "tcp", 80);
-		Serial.println("OK");
-	}
-	else
-	{
-		Serial.println("Failed !");
-	}
 }
 
 /**
@@ -241,6 +230,33 @@ static bool handleFile(AsyncWebServerRequest *request, String path)
 {
 	Serial.println("handleFile: " + path);
 
+// HACK emulate large file
+Serial.println("emulate large file");
+AsyncWebServerResponse *response = request->beginChunkedResponse("text/plain", [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+	Serial.print("heap: "); Serial.println(ESP.getFreeHeap());
+	if ( index > 1000000 )
+	{
+		Serial.println("END");
+		return 0;
+	}
+
+Serial.print("index: "); Serial.println(index);
+Serial.print("maxLen: "); Serial.println(maxLen);
+//	if ( maxLen > 1000) maxLen = 1000; Serial.print("maxLen: "); Serial.println(maxLen);
+	for ( int i = 0; i < (maxLen-1); i ++)
+		buffer[i] = '0' + (i%10);
+	buffer[maxLen-1] = '\n';
+	yield(); // TODO ist das erlaubt?
+	return maxLen;
+});
+request->send(response);
+Serial.println("data sent");
+return true;
+
+// TODO emulate file
+#if 0	
+	Serial.println("handleFile: " + path);
+
 	// security check
 	if (path.indexOf("..") >= 0)
 		return false;
@@ -267,7 +283,19 @@ static bool handleFile(AsyncWebServerRequest *request, String path)
 		// send file
 // TODO send file in chuncks, save RAM to avoid crashes ???
 		auto file = SPIFFS.open(path);
-		AsyncWebServerResponse *response = request->beginResponse(file, path, contentType);
+		auto size = file.size();
+Serial.print("size: "); Serial.println(size);
+
+		AsyncWebServerResponse *response = request->beginChunkedResponse("text/plain", [&file](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+			maxLen = min(maxLen, _fileBufferSize);
+Serial.print("index: "); Serial.println(index);
+Serial.print("maxLen: "); Serial.println(maxLen);
+			int len = file.read(buffer, maxLen);
+Serial.print("bytes read: "); Serial.println(len);
+			if ( len < 0 )
+				len = 0;
+			return len;
+		});
 		if (foundCompressed)
 			response->addHeader("Content-Encoding", "gzip");
 		request->send(response);
@@ -277,6 +305,7 @@ static bool handleFile(AsyncWebServerRequest *request, String path)
 
 	Serial.println(String("File Not Found: ") + path);
 	return false;
+#endif	
 }
 
 /**
@@ -537,12 +566,14 @@ void CaptivePortal::setup()
 	wifiClientConnectionTimeout = config["CaptivePortal"]["wifiClientConnectionTimeout"] | defaultConfig.wifiClientConnectionTimeout;
 
 	// init WiFi
-	WiFi.mode(WIFI_MODE_APSTA);
+// TODO station only	WiFi.mode(WIFI_MODE_APSTA);
+	WiFi.mode(WIFI_MODE_STA);
 	WiFi.setAutoReconnect(false);
 	WiFi.persistent(false);
+	WiFi.setHostname(config["hostname"]);
 
 	// start AP
-	startCaptiveAP();
+// TODO	startCaptiveAP();
 
 	// connect as WiFi Client
 	connectWiFiClient();
@@ -551,6 +582,18 @@ void CaptivePortal::setup()
 	Serial.print(WiFi.softAPIP());
 	Serial.print(", ");
 	Serial.println(WiFi.localIP());
+
+	// enable mDNS
+	Serial.print("Start mDNS ... ");
+	if (MDNS.begin(config["hostname"]))
+	{
+		MDNS.addService("http", "tcp", 80);
+		Serial.println("OK");
+	}
+	else
+	{
+		Serial.println("Failed !");
+	}	
 
 	// setup HTTP server
 	Serial.print("Start WebServer ... ");
@@ -564,8 +607,6 @@ void CaptivePortal::setup()
 
 	_httpServer.on("/generate_204", handleCaptiveRequest); // Android captive portal.
 	_httpServer.on("/fwlink", handleCaptiveRequest);	   // Microsoft captive portal.
-
-// FIX	_httpServer.serveStatic("/", SPIFFS, "/public/");	// handle static files
 
 	// generic not found
 	_httpServer.onNotFound(handleGenericHTTP);
@@ -581,7 +622,8 @@ void CaptivePortal::begin()
 void CaptivePortal::loop()
 {
 	//DNS
-	_dnsServer.processNextRequest();
+	if ( _dnsServerActive )
+		_dnsServer.processNextRequest();
 }
 
 /*******************************************************************************************************************************

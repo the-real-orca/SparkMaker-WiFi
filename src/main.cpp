@@ -11,9 +11,6 @@ CaptivePortal captivePortal;
 #include "SparkMaker.h"
 SparkMaker spark;
 
-// TODO disabled minimize code for crash analysis
-#if 0
-
 void handleStatus(AsyncWebServerRequest *request)
 {
 	tempJson.clear();
@@ -66,7 +63,6 @@ void handleCmdMove(AsyncWebServerRequest *request)
 	request->send(200, "text/plain", "OK");
 }
 
-#endif
 
 void setup()
 {
@@ -82,8 +78,6 @@ void setup()
 	captivePortal.setup();
 
 	// custom pages
-// TODO disabled minimize code for crash analysis
-#if 0
 	captivePortal.on("/status", handleStatus);
 	captivePortal.on("/print", handleCmdPrint);
 
@@ -94,12 +88,8 @@ void setup()
 	captivePortal.on("/requestStatus", [](AsyncWebServerRequest *request){ spark.requestStatus(); request->send(200, "text/plain", "OK"); });
 	captivePortal.on("/home", [](AsyncWebServerRequest *request){ spark.home(); request->send(200, "text/plain", "OK"); });
 	captivePortal.on("/move", handleCmdMove);
-
-
-	captivePortal.on("/send", handleCmdSend);
 	captivePortal.on("/connect", handleCmdConnect);
 	captivePortal.on("/disconnect", handleCmdDisconnect);
-#endif
 
 	captivePortal.begin();
 

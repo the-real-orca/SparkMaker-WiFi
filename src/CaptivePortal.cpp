@@ -256,14 +256,25 @@ static bool handleFile(AsyncWebServerRequest *request, String path)
 		auto file = SPIFFS.open(path);
 		int32_t size = file.size();
 		file.close();
+		AsyncWebServerResponse *response = request->beginResponse(SPIFFS, path);
+/*		
 		AsyncWebServerResponse *response = request->beginResponse(contentType, size, [path, size](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-Serial.print("  "); Serial.print(path); Serial.print(" "); Serial.print(index); Serial.print(" / "); Serial.print(size); Serial.print(" maxLen: "); Serial.println(maxLen); // TODO debut output
-			if ( maxLen > 2000 )
-				maxLen = maxLen / 2;
+		AsyncWebServerResponse *response = request->beginChunkedResponse(contentType, [path, size](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+			if ( index >= size )
+			{
+				Serial.print("END "); Serial.println(path);
+				return 0;
+			}
+
+Serial.print("  "); Serial.print(path); Serial.print(" "); Serial.print(index); Serial.print(" / "); Serial.print(size); Serial.print(" maxLen: "); Serial.print(maxLen); // TODO debut output
+// TODO			if ( maxLen > 2000 ) maxLen = 2000;
+Serial.print(" -> "); Serial.print(maxLen); // TODO debut output
+			if ( maxLen == 0 ) return 0;
 			auto file = SPIFFS.open(path);
 			file.seek(index);
 			size_t len = file.read(buffer, maxLen);
 			file.close();
+Serial.print(" -> "); Serial.println(len); // TODO debut output
 			// last part to send
 			if ( index + len >= size )
 			{
@@ -271,6 +282,8 @@ Serial.print("  "); Serial.print(path); Serial.print(" "); Serial.print(index); 
 			}
 			return len;
 		});
+*/			
+
 		if (foundCompressed)
 			response->addHeader("Content-Encoding", "gzip");
 		request->send(response);
@@ -526,7 +539,7 @@ void CaptivePortal::setup()
 {
 	// file system
 // FIX number of files limited	
-	SPIFFS.begin(true, "", 2); // format filesystem if failed
+	SPIFFS.begin(true, "", 10); // format filesystem if failed
 	listDir(SPIFFS, "/", 0);
 
 	// load config
@@ -583,6 +596,7 @@ void CaptivePortal::setup()
 	_httpServer.on("/fwlink", handleCaptiveRequest);	   // Microsoft captive portal.
 
 	// generic not found
+	_httpServer.serveStatic("/", SPIFFS, "/public/").setDefaultFile("index.html");
 	_httpServer.onNotFound(handleGenericHTTP);
 	Serial.println("OK");
 }

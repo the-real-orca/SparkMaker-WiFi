@@ -5,8 +5,27 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="style.css">
 <!-- TODO	<script src="js/vue.min.js"></script> -->
-	<script src="js/vue.js"></script>
 	<title>SparkMaker WiFi Interface</title>
+	<script>
+		startTimestamp = Date.now();
+		window.addEventListener('load', (event) => {
+			var time = Date.now();
+			console.log("Page loaded: " +  (time - startTimestamp)/1000);
+			try {
+				if ( Vue )
+					console.log("Vue ready");
+			} catch (error) {
+				// delay Vue load
+				var script = document.createElement('script');
+				script.onload = function () {
+					var time = Date.now();
+					console.log("vue onload: " +  (time - startTimestamp)/1000);
+				};
+				script.src = "js/vue.js";
+				document.body.appendChild(script);
+			}
+		});
+	</script>	
 </head>
 <body>
 	<div id="app">
@@ -85,6 +104,7 @@
 
 	</div>
 
+<!--	<script src="js/vue.js"></script> -->
 	<script>
 		function debounce (fn, delay) {
 			var timeoutID = null
@@ -98,6 +118,10 @@
 			}
 		}
 
+		var time = Date.now();
+		console.log("Script started: " +  (time - startTimestamp));
+
+/*
 		var app = new Vue({
 			el: "#app",
 			data: {
@@ -105,7 +129,7 @@
 				spark: {},
 				selectedFile: "",
 				waitStatusChange: true,
-				updateIntervalTime: 2000,
+				updateIntervalTime: 0,
 				intervalHandler: null
 			},
 			computed: {
@@ -237,7 +261,8 @@
 					}
 				}
 			}
-		})    
+		}) 
+*/		
 	</script>
 </body>
 

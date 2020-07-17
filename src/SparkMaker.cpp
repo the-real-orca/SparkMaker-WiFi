@@ -41,7 +41,9 @@ typedef enum
 	READ_FILES
 } BLESTATE;
 static BLESTATE bleState = NA;
+static uint32_t bleScantime = 0;
 
+extern int webServerActive;
 
 /**
  * string names for WiFi encryption
@@ -399,9 +401,6 @@ void SparkMaker::setup()
 	// get BLE scanner object
 	BLEScan *pBLEScan = BLEDevice::getScan();
 	pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks);
-	pBLEScan->setInterval(1000);
-	pBLEScan->setWindow(500);
-	pBLEScan->setActiveScan(true);
 
 	// SparkMaker state handling
 	bleState = SCANNING;
@@ -413,6 +412,7 @@ void SparkMaker::setup()
  */
 void SparkMaker::loop()
 {
+	uint32_t time = millis();
 	switch (bleState)
 	{
 	case NA:
@@ -425,8 +425,12 @@ void SparkMaker::loop()
 		// scan for BLE devices
 		printer.status = DISCONNECTED;
 		SparkMaker::printer.filenames.clear();
-		Serial.println("scan BLE");
-		BLEDevice::getScan()->start(1);
+		if ( (time - bleScantime) > 2500 )
+		{
+			Serial.println("scan BLE");
+			BLEDevice::getScan()->start(1);
+			bleScantime = time;
+		}
 		break;
 
 	case FOUND:
@@ -434,6 +438,7 @@ void SparkMaker::loop()
 		if ( connectBLE() )
 		{
 			Serial.println("Connecting to SparkMaker");
+			BLEDevice::getScan()->stop();
 			printer.status = CONNECTING;
 		}
 		else

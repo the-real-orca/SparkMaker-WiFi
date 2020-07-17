@@ -5,6 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="style.css">
 <!-- TODO	<script src="js/vue.min.js"></script> -->
+	<script src="js/vue.js"></script>
 	<title>SparkMaker WiFi Interface</title>
 </head>
 <body>
@@ -76,17 +77,36 @@
 			</div>
 		</fieldset>
 
+		<fieldset class="center">
+			<legend>Debug</legend>
+			<label>Status Update Interval: <input type="number" v-model="updateIntervalTime" style="width:6em"></input>ms</label>
+			<button @click="statusUpdate">get status now</button>
+		</fieldset>
+
 	</div>
 
 	<script>
+		function debounce (fn, delay) {
+			var timeoutID = null
+			return function () {
+				clearTimeout(timeoutID)
+				var args = arguments
+				var that = this
+				timeoutID = setTimeout(function () {
+					fn.apply(that, args)
+				}, delay)
+			}
+		}
+
 		var app = new Vue({
 			el: "#app",
 			data: {
 				url: "", // http://sparkmaker.local/",
 				spark: {},
 				selectedFile: "",
-				waitStatusChange: true
-
+				waitStatusChange: true,
+				updateIntervalTime: 2000,
+				intervalHandler: null
 			},
 			computed: {
 				percent() { 
@@ -134,12 +154,21 @@
 						return 0;
 				}
 			},
+			watch: {
+				updateIntervalTime: {
+					immediate: true,
+					handler: debounce(function (newVal, oldVal) {
+						newVal = parseInt(newVal);
+						if ( this.intervalHandler )
+							clearInterval(this.intervalHandler);
+						this.intervalHandler = null;
+						if ( newVal ) {
+							this.intervalHandler = setInterval(this.statusUpdate, newVal);
+						}
+					}, 500)
+				}
+			},			
 			mounted() {
-				// fetch initial status
-				this.update();
-
-				// periodic update
-				setInterval(this.update, 2000);
 			},
 			methods: {
 				indicator() {
@@ -149,7 +178,7 @@
 				},
 				connect() { fetch(this.url + "connect"); this.waitStatusChange = true; },
 				disconnect() { fetch(this.url + "disconnect"); this.waitStatusChange = true; },
-				update() {
+				statusUpdate() {
 					fetch(this.url + "status")
 						.then(response => response.json())
 						.then(json => {

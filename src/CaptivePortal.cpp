@@ -23,7 +23,6 @@ static bool _dnsServerActive = false;
 // Web
 static const byte HTTP_PORT = 80;
 AsyncWebServer _httpServer(HTTP_PORT);
-const size_t _fileBufferSize  = 1024;
 
 // JSON
 DynamicJsonDocument config(configJsonSize);
@@ -228,34 +227,7 @@ static String getContentType(String filename)
  */
 static bool handleFile(AsyncWebServerRequest *request, String path)
 {
-	Serial.println("handleFile: " + path);
-
-// HACK emulate large file
-Serial.println("emulate large file");
-AsyncWebServerResponse *response = request->beginChunkedResponse("text/plain", [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-	Serial.print("heap: "); Serial.println(ESP.getFreeHeap());
-	if ( index > 1000000 )
-	{
-		Serial.println("END");
-		return 0;
-	}
-
-Serial.print("index: "); Serial.println(index);
-Serial.print("maxLen: "); Serial.println(maxLen);
-//	if ( maxLen > 1000) maxLen = 1000; Serial.print("maxLen: "); Serial.println(maxLen);
-	for ( int i = 0; i < (maxLen-1); i ++)
-		buffer[i] = '0' + (i%10);
-	buffer[maxLen-1] = '\n';
-	yield(); // TODO ist das erlaubt?
-	return maxLen;
-});
-request->send(response);
-Serial.println("data sent");
-return true;
-
-// TODO emulate file
-#if 0	
-	Serial.println("handleFile: " + path);
+	Serial.print("handleFile: "); Serial.println(path);
 
 	// security check
 	if (path.indexOf("..") >= 0)
@@ -281,31 +253,32 @@ return true;
 			path = pathCompressed;
 
 		// send file
-// TODO send file in chuncks, save RAM to avoid crashes ???
 		auto file = SPIFFS.open(path);
-		auto size = file.size();
-Serial.print("size: "); Serial.println(size);
-
-		AsyncWebServerResponse *response = request->beginChunkedResponse("text/plain", [&file](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-			maxLen = min(maxLen, _fileBufferSize);
-Serial.print("index: "); Serial.println(index);
-Serial.print("maxLen: "); Serial.println(maxLen);
-			int len = file.read(buffer, maxLen);
-Serial.print("bytes read: "); Serial.println(len);
-			if ( len < 0 )
-				len = 0;
+		int32_t size = file.size();
+		file.close();
+		AsyncWebServerResponse *response = request->beginResponse(contentType, size, [path, size](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+Serial.print("  "); Serial.print(path); Serial.print(" "); Serial.print(index); Serial.print(" / "); Serial.print(size); Serial.print(" maxLen: "); Serial.println(maxLen); // TODO debut output
+			if ( maxLen > 2000 )
+				maxLen = maxLen / 2;
+			auto file = SPIFFS.open(path);
+			file.seek(index);
+			size_t len = file.read(buffer, maxLen);
+			file.close();
+			// last part to send
+			if ( index + len >= size )
+			{
+				Serial.print("File finished: "); Serial.println(path);
+			}
 			return len;
 		});
 		if (foundCompressed)
 			response->addHeader("Content-Encoding", "gzip");
 		request->send(response);
-		Serial.println(String("Sent file: ") + path);
 		return true;
 	}
 
 	Serial.println(String("File Not Found: ") + path);
 	return false;
-#endif	
 }
 
 /**
@@ -566,6 +539,7 @@ void CaptivePortal::setup()
 	wifiClientConnectionTimeout = config["CaptivePortal"]["wifiClientConnectionTimeout"] | defaultConfig.wifiClientConnectionTimeout;
 
 	// init WiFi
+// TODO	switch wetween AP captive portal and BLE
 // TODO station only	WiFi.mode(WIFI_MODE_APSTA);
 	WiFi.mode(WIFI_MODE_STA);
 	WiFi.setAutoReconnect(false);
@@ -573,7 +547,7 @@ void CaptivePortal::setup()
 	WiFi.setHostname(config["hostname"]);
 
 	// start AP
-// TODO	startCaptiveAP();
+// TODO startCaptiveAP();
 
 	// connect as WiFi Client
 	connectWiFiClient();

@@ -2,6 +2,7 @@
 
 // JSON
 #include <ArduinoJson.h>
+#include "AsyncJson.h"
 
 // Captive Portal
 #include "CaptivePortal.h"
@@ -18,9 +19,20 @@ void handleStatus(AsyncWebServerRequest *request)
 	tempJson["currentLayer"] = spark.printer.currentLayer;
 	tempJson["totalLayers"] = spark.printer.totalLayers;
 	tempJson["currentFile"] = spark.printer.currentFile;
-	uint32_t time = millis() / 1000;
-	uint32_t printTime = time - spark.printer.startTime;
-	uint32_t estimatedTotalTime = printTime * spark.printer.totalLayers / spark.printer.currentLayer;
+	uint32_t printTime = 0;
+	if ( !spark.printer.finishTime )
+	{
+		uint32_t time = millis() / 1000;
+		printTime = time - spark.printer.startTime;
+	}
+	else
+	{
+		printTime = spark.printer.finishTime - spark.printer.startTime;
+	}
+	
+	uint32_t estimatedTotalTime = 0;
+	if ( spark.printer.currentLayer > 3 ) 
+		printTime * spark.printer.totalLayers / spark.printer.currentLayer;
 	tempJson["printTime"] = printTime;
 	tempJson["estimatedTotalTime"] = estimatedTotalTime;
 	auto files = tempJson.createNestedArray("fileList");
@@ -33,7 +45,7 @@ void handleStatus(AsyncWebServerRequest *request)
 	String content;
 	serializeJsonPretty(tempJson, content);
 	request->send(200, "application/json", content);
-	Serial.println(content);
+// TODO	Serial.println(content);
 }
 
 void handleCmdDisconnect(AsyncWebServerRequest *request)
@@ -99,5 +111,5 @@ void setup()
 void loop()
 {
 	captivePortal.loop();
-// TODO	spark.loop();
+	spark.loop();
 }

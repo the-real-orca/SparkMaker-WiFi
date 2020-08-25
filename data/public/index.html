@@ -1,35 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+	<title>SparkMaker WiFi Interface</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="style.css">
-<!-- TODO	<script src="js/vue.min.js"></script> -->
-	<title>SparkMaker WiFi Interface</title>
+<!-- TODO <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script> <!-- try vue.js from CDN -->
 	<script>
 		startTimestamp = Date.now();
+		// lazy loading vue.js from local server
 		window.addEventListener('load', (event) => {
 			var time = Date.now();
 			console.log("Page loaded: " +  (time - startTimestamp)/1000);
-			try {
-				if ( Vue )
-					console.log("Vue ready");
-			} catch (error) {
-				// delay Vue load
-				var script = document.createElement('script');
-				script.onload = function () {
-					var time = Date.now();
-					console.log("vue onload: " +  (time - startTimestamp)/1000);
-				};
-				script.src = "js/vue.js";
-				document.body.appendChild(script);
-			}
+			var handler = setTimeout(function () {
+				try {
+					if ( Vue ) {
+						console.log("Vue ready");
+						setupVue();
+					}
+				} catch (error) {
+					// delay Vue load
+					var script = document.createElement('script');
+					script.onload = function () {
+						var time = Date.now();
+						console.log("Vue lazy load: " +  (time - startTimestamp)/1000);
+						setupVue();
+					};
+					script.src = "js/vue.js"; // TODO use vue.min.js
+					document.body.appendChild(script);
+				}
+			}, 200);
 		});
 	</script>	
 </head>
 <body>
+	<h1>SparkMaker WiFi Interface</h1>
+	<div id="loadingApp">
+		Loading ...
+	</div>
 	<div id="app">
-		<h1>SparkMaker WiFi Interface</h1>
 		<div id="printer">
 			<div id="printer-img">
 				<div id="printer-top">
@@ -59,7 +68,7 @@
 				<button @click="home" class="home" title="home build plate">Home</button><br>
 			</fieldset>
 	
-			<fieldset class="commands center">
+			<fieldset class="commands center" v-if="spark.status">
 				<button @click="connect" class="primary" v-if="spark.status=='DISCONNECTED'" title="enable BlueTooth">
 					<img src="img/no_bt.png" alt="enable BlueTooth">
 				</button>
@@ -118,151 +127,146 @@
 			}
 		}
 
-		var time = Date.now();
-		console.log("Script started: " +  (time - startTimestamp));
-
-/*
-		var app = new Vue({
-			el: "#app",
-			data: {
-				url: "", // http://sparkmaker.local/",
-				spark: {},
-				selectedFile: "",
-				waitStatusChange: true,
-				updateIntervalTime: 0,
-				intervalHandler: null
-			},
-			computed: {
-				percent() { 
-					return this.spark.totalLayers > 0 ? (this.spark.currentLayer / this.spark.totalLayers *100).toFixed(0) : '---' ; 
+		function setupVue() {
+			app = new Vue({
+				el: "#app",
+				data: {
+					url: "", // http://sparkmaker.local/",
+					spark: {},
+					selectedFile: "",
+					waitStatusChange: true,
+					mounted: false,
+					updateIntervalTime: 2500,
+					intervalHandler: null
 				},
-				printable() {
-					return (this.spark.status=='STANDBY' || this.spark.status=='FINISHED') && (this.selectedFile!="");
-				},
-				statusText() {
-					switch (this.spark.status) {
-						case "DISCONNECTED":
-							return "offline";
-						case "CONNECTING":
-							return "connecting ...";
-						case "STANDBY":
-							return "standby";
-						case "FILELIST":
-							return "get filelist";
-						case "PRINTING":
-							return "printing ...";
-						case "PAUSE":
-							return "pause";
-						case "FINISHED":
-							return "finished";
-						case "STOPPING":
-							return "stopping";
-						case "NO_CARD":
-							return "no SD card";
-						case "UPDATING":
-							return "updating";			
-					}
-
-				},
-				estimatedTotalTime() {
-					if ( this.spark.estimatedTotalTime > 0 )
-						return this.spark.estimatedTotalTime;
-					else
-						return 0;
-				},
-				remainingTime() {
-					var remaining = this.spark.estimatedTotalTime - this.spark.printTime;
-					if ( remaining > 0 && this.spark.currentLayer > 5 )
-						return remaining;
-					else
-						return 0;
-				}
-			},
-			watch: {
-				updateIntervalTime: {
-					immediate: true,
-					handler: debounce(function (newVal, oldVal) {
-						newVal = parseInt(newVal);
-						if ( this.intervalHandler )
-							clearInterval(this.intervalHandler);
-						this.intervalHandler = null;
-						if ( newVal ) {
-							this.intervalHandler = setInterval(this.statusUpdate, newVal);
+				computed: {
+					percent() { 
+						return this.spark.totalLayers > 0 ? (this.spark.currentLayer / this.spark.totalLayers *100).toFixed(0) : '---' ; 
+					},
+					printable() {
+						return (this.spark.status=='STANDBY' || this.spark.status=='FINISHED') && (this.selectedFile!="");
+					},
+					statusText() {
+						switch (this.spark.status) {
+							case "DISCONNECTED":
+								return "offline";
+							case "CONNECTING":
+								return "connecting ...";
+							case "STANDBY":
+								return "standby";
+							case "FILELIST":
+								return "get filelist";
+							case "PRINTING":
+								return "printing ...";
+							case "PAUSE":
+								return "pause";
+							case "FINISHED":
+								return "finished";
+							case "STOPPING":
+								return "stopping";
+							case "NO_CARD":
+								return "no SD card";
+							case "UPDATING":
+								return "updating";			
 						}
-					}, 500)
-				}
-			},			
-			mounted() {
-			},
-			methods: {
-				indicator() {
-					if (this.spark.status=='STANDBY') return this.start();
-					if (this.spark.status=='PRINTING') return this.pause();
-					if (this.spark.status=='PAUSE') return this.resume();
-				},
-				connect() { fetch(this.url + "connect"); this.waitStatusChange = true; },
-				disconnect() { fetch(this.url + "disconnect"); this.waitStatusChange = true; },
-				statusUpdate() {
-					fetch(this.url + "status")
-						.then(response => response.json())
-						.then(json => {
-							var oldStatus = this.spark.status;
-							this.spark = json;
 
-							// force selected file during print
-							if ( this.spark.status!='STANDBY' && this.spark.status!='FINISHED' ) {
-								this.selectedFile = this.spark.currentFile;
+					},
+					estimatedTotalTime() {
+						if ( this.spark.estimatedTotalTime > 0 )
+							return this.spark.estimatedTotalTime;
+						else
+							return 0;
+					},
+					remainingTime() {
+						var remaining = this.spark.estimatedTotalTime - this.spark.printTime;
+						if ( remaining > 0 && this.spark.currentLayer > 5 )
+							return remaining;
+						else
+							return 0;
+					}
+				},
+				watch: {
+					updateIntervalTime: {
+						immediate: true,
+						handler: debounce(function (newVal, oldVal) {
+							newVal = parseInt(newVal);
+							if ( this.intervalHandler )
+								clearInterval(this.intervalHandler);
+							this.intervalHandler = null;
+							if ( newVal ) {
+								this.intervalHandler = setInterval(this.statusUpdate, newVal);
 							}
-							// test if selected file is available
-							if ( this.spark.fileList.indexOf( this.selectedFile ) < 0 ||
-								this.spark.status=='DISCONNECTED' || this.spark.status=='CONNECTING' || this.spark.status=='NO_CARD' ) {
-									this.selectedFile = "";
-							}
+						}, 500)
+					}
+				},			
+				mounted() {
+					document.getElementById("loadingApp").style.display = "none";
+					document.getElementById("app").style.display = "block";
+				},
+				methods: {
+					indicator() {
+						if (this.spark.status=='STANDBY') return this.start();
+						if (this.spark.status=='PRINTING') return this.pause();
+						if (this.spark.status=='PAUSE') return this.resume();
+					},
+					connect() { fetch(this.url + "connect"); this.waitStatusChange = true; },
+					disconnect() { fetch(this.url + "disconnect"); this.waitStatusChange = true; },
+					statusUpdate() {
+						fetch(this.url + "status")
+							.then(response => response.json())
+							.then(json => {
+								var oldStatus = this.spark.status;
+								this.spark = json;
 
-							// update status change
-							if ( oldStatus != this.spark.status )
-								this.waitStatusChange = false;
-							if ( this.spark.status == 'CONNECTING')
-								this.waitStatusChange = true;
-						})
-						.catch(err => {});
+								// force selected file during print
+								if ( this.spark.status!='STANDBY' && this.spark.status!='FINISHED' ) {
+									this.selectedFile = this.spark.currentFile;
+								}
+								// test if selected file is available
+								if ( this.spark.fileList.indexOf( this.selectedFile ) < 0 ||
+									this.spark.status=='DISCONNECTED' || this.spark.status=='CONNECTING' || this.spark.status=='NO_CARD' ) {
+										this.selectedFile = "";
+								}
+
+								// update status change
+								if ( oldStatus != this.spark.status )
+									this.waitStatusChange = false;
+								if ( this.spark.status == 'CONNECTING')
+									this.waitStatusChange = true;
+							})
+							.catch(err => {});
+					},
+					move(pos) {
+						var formData = new FormData();
+						formData.append("pos", pos);
+						fetch(this.url + "move", { method: 'POST', body: formData });
+					},
+					home() { fetch(this.url + "home"); },
+					emergency() { fetch(this.url + "emergencyStop"); },
+					start() { 
+						var formData = new FormData();
+						formData.append("file", this.selectedFile);
+						fetch(this.url + "print", { method: 'POST', body: formData });
+						this.waitStatusChange = true;
+					},
+					stop() { fetch(this.url + "stop"); this.waitStatusChange = true; },
+					pause() { fetch(this.url + "pause"); this.waitStatusChange = true; },
+					resume() { fetch(this.url + "resume"); this.waitStatusChange = true; },
+					requestStatus() { fetch(this.url + "requestStatus"); }
 				},
-				move(pos) {
-					var formData = new FormData();
-					formData.append("pos", pos);
-					fetch(this.url + "move", { method: 'POST', body: formData });
-				},
-				backlight(pwm) {
-					var formData = new FormData();
-					formData.append("cmd", "M106 S" + pwm + ";");
-					fetch(this.url + "send", { method: 'POST', body: formData });
-				},
-				home() { fetch(this.url + "home"); },
-				emergency() { fetch(this.url + "emergencyStop"); },
-				start() { 
-					var formData = new FormData();
-					formData.append("file", this.selectedFile);
-					fetch(this.url + "print", { method: 'POST', body: formData });
-					this.waitStatusChange = true;
-				},
-				stop() { fetch(this.url + "stop"); this.waitStatusChange = true; },
-				pause() { fetch(this.url + "pause"); this.waitStatusChange = true; },
-				resume() { fetch(this.url + "resume"); this.waitStatusChange = true; },
-				requestStatus() { fetch(this.url + "requestStatus"); }
-			},
-			filters: {
-				time: function (value) {
-					if ( value > 0 ) {
-						var h = Math.floor(value / 60);
-						var m = value % 60;
-						return h + "h " + m + "m";
-					} else {
-						return "---"
+				filters: {
+					time: function (value) {
+						if ( value > 0 ) {
+							var h = Math.floor(value / 60);
+							var m = value % 60;
+							return h + "h " + m + "m";
+						} else {
+							return "---"
+						}
 					}
 				}
-			}
-		}) 
-*/		
+			}) 
+		}
 	</script>
 </body>
 

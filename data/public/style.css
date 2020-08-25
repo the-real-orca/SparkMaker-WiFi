@@ -62,6 +62,17 @@ body {
 	font-size: 66%;
 }
 
+#loadingApp {
+	display: block;
+	text-align: center;
+	margin-top: 3em;
+	font-size: 200%;
+}
+
+#app {
+	display: none;
+}
+
 h1 {
 	text-align: center;
 }

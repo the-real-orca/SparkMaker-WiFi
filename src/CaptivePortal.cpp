@@ -90,6 +90,14 @@ void connectWiFiClient()
 	WiFi.disconnect();
 	WiFi.scanDelete();
 	int n = WiFi.scanNetworks(false, false);
+
+	// TODO list networks
+	for (int j = 0; j < n; j++)
+	{
+		Serial.print("SSID "); Serial.print( WiFi.SSID(j) );
+		Serial.print(" RSSI "); Serial.println( WiFi.RSSI(j) );
+	}
+
 	bool connected = false;
 	for (int j = 0; j < n && !connected; j++)
 	{
@@ -98,12 +106,10 @@ void connectWiFiClient()
 		if (config["Credentials"].containsKey(ssid))
 		{
 			String pwd = config["Credentials"][ssid];
-			Serial.print("Connect to ");
-			Serial.print(ssid);
-			Serial.print(" ... ");
+			Serial.print("Connect to "); Serial.print(ssid); Serial.print(" ... ");
+
 			WiFi.begin(ssid.c_str(), pwd.c_str());
 			// wait for connection
-
 			for (int16_t i = wifiClientConnectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
 			{
 				delay(100);
@@ -253,37 +259,7 @@ static bool handleFile(AsyncWebServerRequest *request, String path)
 			path = pathCompressed;
 
 		// send file
-		auto file = SPIFFS.open(path);
-		int32_t size = file.size();
-		file.close();
 		AsyncWebServerResponse *response = request->beginResponse(SPIFFS, path);
-/*		
-		AsyncWebServerResponse *response = request->beginResponse(contentType, size, [path, size](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-		AsyncWebServerResponse *response = request->beginChunkedResponse(contentType, [path, size](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-			if ( index >= size )
-			{
-				Serial.print("END "); Serial.println(path);
-				return 0;
-			}
-
-Serial.print("  "); Serial.print(path); Serial.print(" "); Serial.print(index); Serial.print(" / "); Serial.print(size); Serial.print(" maxLen: "); Serial.print(maxLen); // TODO debut output
-// TODO			if ( maxLen > 2000 ) maxLen = 2000;
-Serial.print(" -> "); Serial.print(maxLen); // TODO debut output
-			if ( maxLen == 0 ) return 0;
-			auto file = SPIFFS.open(path);
-			file.seek(index);
-			size_t len = file.read(buffer, maxLen);
-			file.close();
-Serial.print(" -> "); Serial.println(len); // TODO debut output
-			// last part to send
-			if ( index + len >= size )
-			{
-				Serial.print("File finished: "); Serial.println(path);
-			}
-			return len;
-		});
-*/			
-
 		if (foundCompressed)
 			response->addHeader("Content-Encoding", "gzip");
 		request->send(response);
@@ -604,7 +580,7 @@ void CaptivePortal::setup()
 void CaptivePortal::begin()
 {
 	// start _httpServer
-	_httpServer.begin();
+//	_httpServer.begin();
 }
 
 void CaptivePortal::loop()

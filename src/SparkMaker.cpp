@@ -425,7 +425,7 @@ void SparkMaker::loop()
 		// scan for BLE devices
 		printer.status = DISCONNECTED;
 		SparkMaker::printer.filenames.clear();
-		if ( (time - bleScantime) > 2500 )
+		if ( (time - bleScantime) > 2000 )
 		{
 			Serial.println("scan BLE");
 			BLEDevice::getScan()->start(1);

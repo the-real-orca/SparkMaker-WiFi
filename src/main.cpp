@@ -32,7 +32,7 @@ void handleStatus(AsyncWebServerRequest *request)
 	
 	uint32_t estimatedTotalTime = 0;
 	if ( spark.printer.currentLayer > 3 ) 
-		printTime * spark.printer.totalLayers / spark.printer.currentLayer;
+		estimatedTotalTime = (printTime * spark.printer.totalLayers) / spark.printer.currentLayer;
 	tempJson["printTime"] = printTime;
 	tempJson["estimatedTotalTime"] = estimatedTotalTime;
 	auto files = tempJson.createNestedArray("fileList");
@@ -110,6 +110,15 @@ void setup()
 
 void loop()
 {
-	captivePortal.loop();
+// TODO	captivePortal.loop();
 	spark.loop();
 }
+
+/* FIXME
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  btStop();
+  adc_power_off();
+  //esp_wifi_stop(); // Doesn't work for me!
+  esp_bt_controller_disable();
+  */

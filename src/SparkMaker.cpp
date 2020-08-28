@@ -42,6 +42,7 @@ typedef enum
 } BLESTATE;
 static BLESTATE bleState = NA;
 static uint32_t bleScantime = 0;
+static BLEScan *pBLEScan = NULL;
 
 extern int webServerActive;
 
@@ -399,8 +400,13 @@ void SparkMaker::setup()
 	statusRequestInterval = ( config["SparkMaker"]["statusRequestInterval"] | defaultConfig.statusRequestInterval ) * 1000;
 
 	// get BLE scanner object
-	BLEScan *pBLEScan = BLEDevice::getScan();
+	pBLEScan = BLEDevice::getScan();
 	pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks);
+	pBLEScan->setWindow(2000);
+	pBLEScan->setInterval(200);
+	pBLEScan->setActiveScan(true);
+	pBLEScan->clearResults();
+	pBLEScan->start(1);
 
 	// SparkMaker state handling
 	bleState = SCANNING;
@@ -425,20 +431,20 @@ void SparkMaker::loop()
 		// scan for BLE devices
 		printer.status = DISCONNECTED;
 		SparkMaker::printer.filenames.clear();
-		if ( (time - bleScantime) > 2000 )
+		if ( (time - bleScantime) > 3000 && pBLEScan)
 		{
 			Serial.println("scan BLE");
-			BLEDevice::getScan()->start(1);
+			pBLEScan->start(1);
 			bleScantime = time;
 		}
 		break;
 
 	case FOUND:
 		// connect to SparkMaker device
-		if ( connectBLE() )
+		if ( connectBLE() && pBLEScan)
 		{
 			Serial.println("Connecting to SparkMaker");
-			BLEDevice::getScan()->stop();
+			pBLEScan->stop();
 			printer.status = CONNECTING;
 		}
 		else

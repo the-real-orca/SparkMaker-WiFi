@@ -6,7 +6,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include "ESPAsyncWebServer.h"
+#include <WebServer.h>
 #include <ESPmDNS.h>
 #include <DNSServer.h>
 #include <ArduinoJson.h>
@@ -15,6 +15,7 @@
 #include "config.h"
 const size_t configJsonSize = 1024;
 extern DynamicJsonDocument config;
+
 
 // shared JSON buffer
 const size_t tempJsonSize = 2048;
@@ -29,11 +30,13 @@ class CaptivePortal
 	static void loop();
 
 	// web server functions
-	static AsyncWebServer &getHttpServer();
-
-	static void on(const String &uri, ArRequestHandlerFunction handler);
-	static void on(const String &uri, WebRequestMethodComposite method, ArRequestHandlerFunction handler);
-	static void on(const String &uri, WebRequestMethodComposite method, ArRequestHandlerFunction handler, ArUploadHandlerFunction ufn);
+	static WebServer &getHttpServer();
+	static void on(const String &uri, WebServer::THandlerFunction handler);
+	static void on(const String &uri, HTTPMethod method, WebServer::THandlerFunction handler);
+	static void on(const String &uri, HTTPMethod method, WebServer::THandlerFunction handler, WebServer::THandlerFunction ufn);
+	static void sendHeader(const String &name, const String &value, bool first = false);
+	static void sendFinal(int code, char *content_type, const String &content);
+	static void sendFinal(int code, const String &content_type, const String &content);
 };
 
 #endif // _CAPTIVEPORTAL_h

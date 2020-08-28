@@ -2,7 +2,6 @@
 
 // JSON
 #include <ArduinoJson.h>
-#include "AsyncJson.h"
 
 // Captive Portal
 #include "CaptivePortal.h"
@@ -12,7 +11,7 @@ CaptivePortal captivePortal;
 #include "SparkMaker.h"
 SparkMaker spark;
 
-void handleStatus(AsyncWebServerRequest *request)
+void handleStatus()
 {
 	tempJson.clear();
 	tempJson["status"] = statusNames[spark.printer.status];
@@ -44,35 +43,39 @@ void handleStatus(AsyncWebServerRequest *request)
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
-	request->send(200, "application/json", content);
+	captivePortal.sendFinal(200, "application/json", content);
 // TODO	Serial.println(content);
 }
 
-void handleCmdDisconnect(AsyncWebServerRequest *request)
+void handleCmdDisconnect()
 {
 	spark.disconnect();
-	handleStatus(request);
+	handleStatus();
 }
 
-void handleCmdConnect(AsyncWebServerRequest *request)
+void handleCmdConnect()
 {
 	spark.connect();
-	handleStatus(request);
+	handleStatus();
 }
 
-void handleCmdPrint(AsyncWebServerRequest *request)
+void handleCmdPrint()
 {
+/* TODO	
 	String file = request->arg("file");
 	spark.print(file);
 	request->send(200, "text/plain", "OK");
+*/
 }
 
-void handleCmdMove(AsyncWebServerRequest *request)
+void handleCmdMove()
 {
+/* TODO	
 	int16_t pos = request->arg("pos").toInt();
 	if ( pos )
 		spark.move(pos);
 	request->send(200, "text/plain", "OK");
+*/
 }
 
 
@@ -90,6 +93,7 @@ void setup()
 	captivePortal.setup();
 
 	// custom pages
+/* TODO
 	captivePortal.on("/status", handleStatus);
 	captivePortal.on("/print", handleCmdPrint);
 
@@ -102,6 +106,7 @@ void setup()
 	captivePortal.on("/move", handleCmdMove);
 	captivePortal.on("/connect", handleCmdConnect);
 	captivePortal.on("/disconnect", handleCmdDisconnect);
+*/
 
 	captivePortal.begin();
 
@@ -110,7 +115,7 @@ void setup()
 
 void loop()
 {
-// TODO	captivePortal.loop();
+	captivePortal.loop();
 	spark.loop();
 }
 

@@ -157,11 +157,6 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	if (strncmp(buffer, "pf_", 3) == 0)
 	{
 		char *filename = buffer + 3;
-		if ( filename[0] != 0 )
-		{
-			Serial.print("selected file: ");
-			Serial.println(filename);
-		}
 		SparkMaker::printer.currentFile = filename;
 		return;
 	}

@@ -270,6 +270,7 @@ static bool handleFile(String path)
 			path = pathCompressed;
 
 		// send file
+// FIXME		
 		_httpServer.currentVersion = 0;
 		_httpServer.sendHeader("Cache-Control", "public, max-age=31536000");
 		// _httpServer.sendHeader("Connection", "keep-alive");

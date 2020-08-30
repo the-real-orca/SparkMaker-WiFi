@@ -56,7 +56,7 @@
 					
 				</div>
 			</div>
-<!-- FIXME
+
 			<fieldset class="move center" :disabled="!(spark.status=='STANDBY'  || spark.status=='PAUSE' || spark.status=='FINISHED' || spark.status=='FILELIST' || spark.status=='NO_CARD')">
 				<legend>Z-Axis</legend>
 				<button @click="move(10)" title="move 10mm up">+10</button><br>
@@ -67,7 +67,7 @@
 				<br>
 				<button @click="home" class="home" title="home build plate">Home</button><br>
 			</fieldset>
-	
+	<!-- FIXME
 			<fieldset class="commands center" v-if="spark.status">
 				<button @click="connect" class="primary" v-if="spark.status=='DISCONNECTED'" title="enable BlueTooth">
 					<img src="img/no_bt.png" alt="enable BlueTooth">
@@ -83,8 +83,6 @@
 -->
 		</div>
 		
-<!-- FIXME
-
 		<fieldset class="control center">
 			<div class="fileselect">
 				<label>file:</label>
@@ -106,7 +104,7 @@
 				</div>
 			</div>
 		</fieldset>
--->
+
 		<fieldset class="center">
 			<legend>Debug</legend>
 			<label>Status Update Interval: <input type="number" v-model="updateIntervalTime" style="width:6em"></input>ms</label>

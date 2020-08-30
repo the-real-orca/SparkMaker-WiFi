@@ -2,7 +2,6 @@
 
 // JSON
 #include <ArduinoJson.h>
-// TODO #include "AsyncJson.h"
 
 // Captive Portal
 #include "CaptivePortal.h"
@@ -12,10 +11,8 @@ CaptivePortal captivePortal;
 #include "SparkMaker.h"
 SparkMaker spark;
 
-void handleStatus(AsyncWebServerRequest *request)
+void handleStatus()
 {
-	Serial.println("handleStatus");
-
 	tempJson.clear();
 	tempJson["status"] = statusNames[spark.printer.status];
 	tempJson["uptime"] = millis();
@@ -35,7 +32,7 @@ void handleStatus(AsyncWebServerRequest *request)
 	
 	uint32_t estimatedTotalTime = 0;
 	if ( spark.printer.currentLayer > 3 ) 
-		estimatedTotalTime = printTime * spark.printer.totalLayers / spark.printer.currentLayer;
+		estimatedTotalTime = (printTime * spark.printer.totalLayers) / spark.printer.currentLayer;
 	tempJson["printTime"] = printTime;
 	tempJson["estimatedTotalTime"] = estimatedTotalTime;
 	auto files = tempJson.createNestedArray("fileList");
@@ -47,35 +44,35 @@ void handleStatus(AsyncWebServerRequest *request)
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
-	request->send(200, "application/json", content);
+	captivePortal.sendFinal(200, "application/json", content);
 // TODO	Serial.println(content);
 }
 
-void handleCmdDisconnect(AsyncWebServerRequest *request)
+void handleCmdDisconnect()
 {
 	spark.disconnect();
-	handleStatus(request);
+	handleStatus();
 }
 
-void handleCmdConnect(AsyncWebServerRequest *request)
+void handleCmdConnect()
 {
 	spark.connect();
-	handleStatus(request);
+	handleStatus();
 }
 
-void handleCmdPrint(AsyncWebServerRequest *request)
+void handleCmdPrint()
 {
-	String file = request->arg("file");
+	String file = captivePortal.getHttpServer().arg("file");
 	spark.print(file);
-	request->send(200, "text/plain", "OK");
+	captivePortal.sendFinal(200, "text/plain", "OK");
 }
 
-void handleCmdMove(AsyncWebServerRequest *request)
+void handleCmdMove()
 {
-	int16_t pos = request->arg("pos").toInt();
+	int16_t pos = captivePortal.getHttpServer().arg("pos").toInt();
 	if ( pos )
 		spark.move(pos);
-	request->send(200, "text/plain", "OK");
+	captivePortal.sendFinal(200, "text/plain", "OK");
 }
 
 
@@ -93,21 +90,19 @@ void setup()
 	captivePortal.setup();
 
 	// custom pages
+
 	captivePortal.on("/status", handleStatus);
 	captivePortal.on("/print", handleCmdPrint);
 
-/* TODO
-
-	captivePortal.on("/stop", [](AsyncWebServerRequest *request){ spark.stopPrint(); request->send(200, "text/plain", "OK"); });
-	captivePortal.on("/pause", [](AsyncWebServerRequest *request){ spark.pausePrint(); request->send(200, "text/plain", "OK"); });
-	captivePortal.on("/resume", [](AsyncWebServerRequest *request){ spark.resumePrint(); request->send(200, "text/plain", "OK"); });
-	captivePortal.on("/emergencyStop", [](AsyncWebServerRequest *request){ spark.emergencyStop(); request->send(200, "text/plain", "OK"); });
-	captivePortal.on("/requestStatus", [](AsyncWebServerRequest *request){ spark.requestStatus(); request->send(200, "text/plain", "OK"); });
-	captivePortal.on("/home", [](AsyncWebServerRequest *request){ spark.home(); request->send(200, "text/plain", "OK"); });
+	captivePortal.on("/stop", [](){ spark.stopPrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/pause", [](){ spark.pausePrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/resume", [](){ spark.resumePrint(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/emergencyStop", [](){ spark.emergencyStop(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/requestStatus", [](){ spark.requestStatus(); captivePortal.sendFinal(200, "text/plain", "OK"); });
+	captivePortal.on("/home", [](){ spark.home(); captivePortal.sendFinal(200, "text/plain", "OK"); });
 	captivePortal.on("/move", handleCmdMove);
 	captivePortal.on("/connect", handleCmdConnect);
 	captivePortal.on("/disconnect", handleCmdDisconnect);
-*/
 
 	captivePortal.begin();
 
@@ -116,12 +111,11 @@ void setup()
 
 void loop()
 {
-// TODO	captivePortal.loop();
+	captivePortal.loop();
 	spark.loop();
 }
 
-/* FIXM
-E
+/* FIXME
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   btStop();

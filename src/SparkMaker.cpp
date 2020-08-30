@@ -44,7 +44,6 @@ static BLESTATE bleState = NA;
 static uint32_t bleScantime = 0;
 static BLEScan *pBLEScan = NULL;
 
-extern int webServerActive;
 
 /**
  * string names for WiFi encryption
@@ -158,8 +157,11 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	if (strncmp(buffer, "pf_", 3) == 0)
 	{
 		char *filename = buffer + 3;
-		Serial.print("selected file: ");
-		Serial.println(filename);
+		if ( filename[0] != 0 )
+		{
+			Serial.print("selected file: ");
+			Serial.println(filename);
+		}
 		SparkMaker::printer.currentFile = filename;
 		return;
 	}
@@ -354,31 +356,26 @@ bool connectBLE()
 		// create new BLE client
 		client = BLEDevice::createClient();
 
-		yield();
 		client->setClientCallbacks(new ConnectionCallback());
 		client->connect(sparkMakerBLEDevice);
 		if (!client->isConnected())
 			break;
 
 		Serial.println("registering to SparkMakerServiceRxUUID ...");
-		yield();
 		auto rxService = client->getService(SparkMakerServiceRxUUID);
-		if (!rxService)
+		if (!rxService || !client->isConnected() )
 			break;
-		Serial.println("get characteristics ...");
-		yield();
 		rxCharacteristic = rxService->getCharacteristic(SparkMakerCharRxUUID);
 		if (!rxCharacteristic || !rxCharacteristic->canNotify())
 			break;
-		yield();
 		rxCharacteristic->registerForNotify(notifyCallback);
+		yield();
 
 		Serial.println("connect SparkMakerServiceTxUUID ...");
-		yield();
 		auto txService = client->getService(SparkMakerServiceTxUUID);
-		if (!txService)
+		if (!txService || !client->isConnected() )
 			break;
-		yield();
+		Serial.println("get characteristics ...");
 		txCharacteristic = txService->getCharacteristic(SparkMakerCharTxUUID);
 		if (!txCharacteristic)
 			break;
@@ -559,7 +556,6 @@ void SparkMaker::send(const String &cmd)
  */
 void SparkMaker::requestStatus()
 {
-	Serial.print(millis()/1000);
 	Serial.println(" send status request");
 	if ( txCharacteristic )
 	{

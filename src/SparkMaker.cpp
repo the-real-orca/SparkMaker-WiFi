@@ -74,13 +74,15 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 	void onResult(BLEAdvertisedDevice advertisedDevice)
 	{
 		Serial.print("BLE Advertised Device found: ");
-		Serial.println(advertisedDevice.toString().c_str());
+		Serial.print(advertisedDevice.toString().c_str()); Serial.print(", RSSI "); Serial.println( advertisedDevice.getRSSI() );
 
 		// check for SparkMaker services
+/* TODO		
 		if (advertisedDevice.isAdvertisingService(SparkMakerServiceUUID))
 		{
 			// stop scanning
-			BLEDevice::getScan()->stop();
+			if ( pBLEScan )
+				pBLEScan->stop();
 
 			// create device
 			if (sparkMakerBLEDevice)
@@ -89,6 +91,7 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 
 			bleState = FOUND;
 		}
+*/		
 	}
 };
 
@@ -313,7 +316,7 @@ class ConnectionCallback : public BLEClientCallbacks
  */
 bool disconnectBLE()
 {
-	Serial.println("connectBLE");
+	Serial.println("disconnect BLE");
 
 	// delete old connections
 	if (client)
@@ -406,7 +409,8 @@ void SparkMaker::setup()
 	pBLEScan->setInterval(200);
 	pBLEScan->setActiveScan(true);
 	pBLEScan->clearResults();
-	pBLEScan->start(1);
+	pBLEScan->start(2);
+
 
 	// SparkMaker state handling
 	bleState = SCANNING;
@@ -431,7 +435,7 @@ void SparkMaker::loop()
 		// scan for BLE devices
 		printer.status = DISCONNECTED;
 		SparkMaker::printer.filenames.clear();
-		if ( (time - bleScantime) > 3000 && pBLEScan)
+		if ( (time - bleScantime) > 3500 && pBLEScan)
 		{
 			Serial.println("scan BLE");
 			pBLEScan->start(1);
@@ -444,7 +448,6 @@ void SparkMaker::loop()
 		if ( connectBLE() && pBLEScan)
 		{
 			Serial.println("Connecting to SparkMaker");
-			pBLEScan->stop();
 			printer.status = CONNECTING;
 		}
 		else

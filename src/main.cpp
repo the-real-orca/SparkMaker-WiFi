@@ -2,6 +2,7 @@
 
 // JSON
 #include <ArduinoJson.h>
+// TODO #include "AsyncJson.h"
 
 // Captive Portal
 #include "CaptivePortal.h"
@@ -11,10 +12,13 @@ CaptivePortal captivePortal;
 #include "SparkMaker.h"
 SparkMaker spark;
 
-void handleStatus()
+void handleStatus(AsyncWebServerRequest *request)
 {
+	Serial.println("handleStatus");
+
 	tempJson.clear();
 	tempJson["status"] = statusNames[spark.printer.status];
+	tempJson["uptime"] = millis();
 	tempJson["currentLayer"] = spark.printer.currentLayer;
 	tempJson["totalLayers"] = spark.printer.totalLayers;
 	tempJson["currentFile"] = spark.printer.currentFile;
@@ -31,7 +35,7 @@ void handleStatus()
 	
 	uint32_t estimatedTotalTime = 0;
 	if ( spark.printer.currentLayer > 3 ) 
-		estimatedTotalTime = (printTime * spark.printer.totalLayers) / spark.printer.currentLayer;
+		estimatedTotalTime = printTime * spark.printer.totalLayers / spark.printer.currentLayer;
 	tempJson["printTime"] = printTime;
 	tempJson["estimatedTotalTime"] = estimatedTotalTime;
 	auto files = tempJson.createNestedArray("fileList");
@@ -43,39 +47,35 @@ void handleStatus()
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
-	captivePortal.sendFinal(200, "application/json", content);
+	request->send(200, "application/json", content);
 // TODO	Serial.println(content);
 }
 
-void handleCmdDisconnect()
+void handleCmdDisconnect(AsyncWebServerRequest *request)
 {
 	spark.disconnect();
-	handleStatus();
+	handleStatus(request);
 }
 
-void handleCmdConnect()
+void handleCmdConnect(AsyncWebServerRequest *request)
 {
 	spark.connect();
-	handleStatus();
+	handleStatus(request);
 }
 
-void handleCmdPrint()
+void handleCmdPrint(AsyncWebServerRequest *request)
 {
-/* TODO	
 	String file = request->arg("file");
 	spark.print(file);
 	request->send(200, "text/plain", "OK");
-*/
 }
 
-void handleCmdMove()
+void handleCmdMove(AsyncWebServerRequest *request)
 {
-/* TODO	
 	int16_t pos = request->arg("pos").toInt();
 	if ( pos )
 		spark.move(pos);
 	request->send(200, "text/plain", "OK");
-*/
 }
 
 
@@ -93,9 +93,10 @@ void setup()
 	captivePortal.setup();
 
 	// custom pages
-/* TODO
 	captivePortal.on("/status", handleStatus);
 	captivePortal.on("/print", handleCmdPrint);
+
+/* TODO
 
 	captivePortal.on("/stop", [](AsyncWebServerRequest *request){ spark.stopPrint(); request->send(200, "text/plain", "OK"); });
 	captivePortal.on("/pause", [](AsyncWebServerRequest *request){ spark.pausePrint(); request->send(200, "text/plain", "OK"); });

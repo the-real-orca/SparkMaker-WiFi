@@ -116,11 +116,12 @@ void setup()
 
 void loop()
 {
-	captivePortal.loop();
+// TODO	captivePortal.loop();
 	spark.loop();
 }
 
-/* FIXME
+/* FIXM
+E
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   btStop();

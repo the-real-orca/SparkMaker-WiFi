@@ -77,7 +77,6 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 		Serial.print(advertisedDevice.toString().c_str()); Serial.print(", RSSI "); Serial.println( advertisedDevice.getRSSI() );
 
 		// check for SparkMaker services
-/* TODO		
 		if (advertisedDevice.isAdvertisingService(SparkMakerServiceUUID))
 		{
 			// stop scanning
@@ -91,7 +90,6 @@ class AdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 
 			bleState = FOUND;
 		}
-*/		
 	}
 };
 
@@ -356,24 +354,31 @@ bool connectBLE()
 		// create new BLE client
 		client = BLEDevice::createClient();
 
+		yield();
 		client->setClientCallbacks(new ConnectionCallback());
 		client->connect(sparkMakerBLEDevice);
 		if (!client->isConnected())
 			break;
 
 		Serial.println("registering to SparkMakerServiceRxUUID ...");
+		yield();
 		auto rxService = client->getService(SparkMakerServiceRxUUID);
 		if (!rxService)
 			break;
+		Serial.println("get characteristics ...");
+		yield();
 		rxCharacteristic = rxService->getCharacteristic(SparkMakerCharRxUUID);
 		if (!rxCharacteristic || !rxCharacteristic->canNotify())
 			break;
+		yield();
 		rxCharacteristic->registerForNotify(notifyCallback);
 
 		Serial.println("connect SparkMakerServiceTxUUID ...");
+		yield();
 		auto txService = client->getService(SparkMakerServiceTxUUID);
 		if (!txService)
 			break;
+		yield();
 		txCharacteristic = txService->getCharacteristic(SparkMakerCharTxUUID);
 		if (!txCharacteristic)
 			break;
@@ -554,7 +559,8 @@ void SparkMaker::send(const String &cmd)
  */
 void SparkMaker::requestStatus()
 {
-	Serial.println("send status request");
+	Serial.print(millis()/1000);
+	Serial.println(" send status request");
 	if ( txCharacteristic )
 	{
 		SparkMaker::printer.lastStatusRequest = millis();

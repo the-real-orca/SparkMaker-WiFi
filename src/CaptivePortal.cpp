@@ -22,15 +22,7 @@ static bool _dnsServerActive = false;
 
 // Web
 static const byte HTTP_PORT = 80;
-
-class MyWebServer : public WebServer
-{
-	public:
-	MyWebServer(int port = 80) : WebServer(port), currentVersion(_currentVersion) {}
-	
-	uint8_t &currentVersion;
-};
-MyWebServer _httpServer(HTTP_PORT);
+WebServer _httpServer(HTTP_PORT);
 
 // JSON
 DynamicJsonDocument config(configJsonSize);
@@ -270,20 +262,12 @@ static bool handleFile(String path)
 			path = pathCompressed;
 
 		// send file
-// FIXME		
-		_httpServer.currentVersion = 0;
 		_httpServer.sendHeader("Cache-Control", "public, max-age=31536000");
-		// _httpServer.sendHeader("Connection", "keep-alive");
-		_httpServer.sendHeader("Connection", "close");
-		_httpServer.sendHeader("Retry-After", "5");
-
 		File file = SPIFFS.open(path, "r");
-//		_httpServer.streamFile(file, contentType);
-_httpServer.client().setNoDelay(true);
-_httpServer.setContentLength(file.size());
-_httpServer.send(200, contentType, "");
-_httpServer.client().write(file);
-file.close();
+		_httpServer.streamFile(file, contentType);
+		_httpServer.client().setNoDelay(true);
+		file.close();
+		_httpServer.client().stop();
 
 		Serial.println(String("Sent file: ") + path);
 		return true;

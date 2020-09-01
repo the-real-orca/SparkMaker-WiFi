@@ -5,8 +5,36 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="style.css">
-<!-- TODO <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script> <!-- try vue.js from CDN -->
+<!-- FIXME	<script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script> <!-- try vue.js from CDN -->
 	<script>
+		var imgList = [];
+		var imgCount = 0;
+		function loadNextImage() {
+			if ( imgList.length > imgCount ) {
+				setTimeout(function () {
+					// load image
+					imgList[imgCount].onload = function() {
+						imgCount++;
+						loadNextImage();
+					}
+					imgList[imgCount].onerror = function() {
+						console.error("error loading " + imgList[imgCount].getAttribute("src"));
+						imgCount++;
+						loadNextImage();
+					}
+					imgList[imgCount].setAttribute("src", imgList[imgCount].getAttribute("data-src"));
+				}, 200);
+			} else {
+				// start app
+				setupVue();
+			}
+		}			
+		function lazyImages() {
+			imgList = document.querySelectorAll("img[data-src]");
+			imgCount = 0;
+			setTimeout(loadNextImage, 1000);
+		}
+
 		startTimestamp = Date.now();
 		// lazy loading vue.js from local server
 		window.addEventListener('load', (event) => {
@@ -15,8 +43,9 @@
 			var handler = setTimeout(function () {
 				try {
 					if ( Vue ) {
-						console.log("Vue ready");
-						setupVue();
+						console.log("Vue ready (CDN): " +  (time - startTimestamp)/1000);
+						// delayed image load
+						lazyImages();
 					}
 				} catch (error) {
 					// delay Vue load
@@ -24,9 +53,10 @@
 					script.onload = function () {
 						var time = Date.now();
 						console.log("Vue lazy load: " +  (time - startTimestamp)/1000);
-						setupVue();
+						// delayed image load
+						lazyImages();
 					};
-					script.src = "js/vue.js"; // TODO use vue.min.js
+					script.src = "js/vue.min.js";
 					document.body.appendChild(script);
 				}
 			}, 200);
@@ -70,14 +100,14 @@
 
 			<fieldset class="commands center" v-if="spark.status">
 				<button @click="connect" class="primary" v-if="spark.status=='DISCONNECTED'" title="enable BlueTooth">
-					<img src="img/no_bt.png" alt="enable BlueTooth">
+					<img data-src="img/no_bt.png" alt="enable BlueTooth">
 				</button>
 				<button @click="disconnect" class=""  v-if="spark.status!='DISCONNECTED'" title="disable BlueTooth">
-					<img src="img/bt.png" alt="disable BlueTooth">
+					<img data-src="img/bt.png" alt="disable BlueTooth">
 				</button>
 				<br>
 				<button @click="emergency" class="danger" title="Emergency Stop">
-					<img src="img/stop.png" alt="Emergency Stop">
+					<img data-src="img/stop.png" alt="Emergency Stop">
 				</button>				
 			</fieldset>
 		</div>
@@ -126,15 +156,16 @@
 		}
 
 		function setupVue() {
+			// create app
 			app = new Vue({
 				el: "#app",
 				data: {
-					url: "", // http://sparkmaker.local/",
+					url: "", // "http://localhost:3000/", "http://sparkmaker.local/",
 					spark: {},
 					selectedFile: "",
 					waitStatusChange: true,
 					mounted: false,
-					updateIntervalTime: 0,
+					updateIntervalTime: 2500,
 					intervalHandler: null
 				},
 				computed: {
@@ -200,6 +231,8 @@
 				mounted() {
 					document.getElementById("loadingApp").style.display = "none";
 					document.getElementById("app").style.display = "block";
+					var time = Date.now();
+					console.log("App ready: " +  (time - startTimestamp)/1000);
 				},
 				methods: {
 					indicator() {

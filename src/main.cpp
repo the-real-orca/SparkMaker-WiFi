@@ -13,16 +13,16 @@ SparkMaker spark;
 
 void handleStatus()
 {
+	uint32_t time = millis() / 1000;
 	tempJson.clear();
 	tempJson["status"] = statusNames[spark.printer.status];
-	tempJson["uptime"] = millis();
+	tempJson["uptime"] = time;
 	tempJson["currentLayer"] = spark.printer.currentLayer;
 	tempJson["totalLayers"] = spark.printer.totalLayers;
 	tempJson["currentFile"] = spark.printer.currentFile;
 	uint32_t printTime = 0;
 	if ( !spark.printer.finishTime )
 	{
-		uint32_t time = millis() / 1000;
 		printTime = time - spark.printer.startTime;
 	}
 	else

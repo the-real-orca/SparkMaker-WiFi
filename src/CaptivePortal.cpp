@@ -262,7 +262,7 @@ static bool handleFile(String path)
 			path = pathCompressed;
 
 		// send file
-		_httpServer.sendHeader("Cache-Control", "public, max-age=31536000");
+		_httpServer.sendHeader("Cache-Control", "public, max-age=36000"); // enable cache
 		File file = SPIFFS.open(path, "r");
 		_httpServer.streamFile(file, contentType);
 		_httpServer.client().setNoDelay(true);
@@ -301,7 +301,8 @@ static void handleGenericHTTP()
 	Serial.println(_httpServer.uri());
 
 	// HTML Header
-	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.sendHeader("Pragma", "no-cache");
 	_httpServer.sendHeader("Expires", "-1");
 	_httpServer.setContentLength(CONTENT_LENGTH_UNKNOWN);
@@ -334,6 +335,7 @@ static void handleInfo()
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
+	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(200, "application/json", content);
 	_httpServer.client().stop();
 }
@@ -404,6 +406,7 @@ static void handleWifiScan()
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
+	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(200, "application/json", content);
 	_httpServer.client().stop();
 	Serial.println(content);
@@ -423,6 +426,7 @@ static void handleWifiAdd()
 	saveConfig(config);
 
 	// send reply
+	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(200, "application/json", "{\"status\": \"OK\"}");
 	_httpServer.client().stop();
 
@@ -448,6 +452,7 @@ static void handleWifiDel()
 	saveConfig(config);
 
 	// send reply
+	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(200, "application/json", "{\"status\": \"OK\"}");
 	_httpServer.client().stop();
 
@@ -626,11 +631,13 @@ void CaptivePortal::sendHeader(const String &name, const String &value, bool fir
 }
 void CaptivePortal::sendFinal(int code, char *content_type, const String &content)
 {
+	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(code, content_type, content);
 	_httpServer.client().stop();
 }
 void CaptivePortal::sendFinal(int code, const String &content_type, const String &content)
 {
+	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(code, content_type, content);
 	_httpServer.client().stop();
 }

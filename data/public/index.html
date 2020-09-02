@@ -56,7 +56,7 @@
 						// delayed image load
 						lazyImages();
 					};
-					script.src = "js/vue.min.js";
+					script.src = "js/vue.js"; // TODO "js/vue.min.js";
 					document.body.appendChild(script);
 				}
 			}, 200);
@@ -75,8 +75,9 @@
 					<div id="status">{{statusText}}</div>
 					<div v-if="spark.status=='PRINTING' || spark.status=='PAUSE' || spark.status=='FINISHED'">
 						<div id="percent">{{percent}}%</div>
+						<div id ="printTime"><label>print time:</label> {{spark.printTime | time}}</div>
 						<div id ="remainingTime"><label>time left:</label> {{remainingTime | time}}</div>
-						<div id ="totalTime"><label>time total:</label> {{estimatedTotalTime | time}}</div>
+						<!-- <div id ="totalTime"><label>time total:</label> {{spark.estimatedTotalTime | time}}</div> -->
 						<div id="layer"><label>layer:</label> {{spark.currentLayer}} / {{spark.totalLayers}}</div>
 					</div>
 				</div>
@@ -134,10 +135,15 @@
 			</div>
 		</fieldset>
 
-		<fieldset class="center">
+		<fieldset class="debug">
 			<legend>Debug</legend>
+			<label>URL: <input type="text" v-model="url" style="width:16em"></input></label>
+			<br/>
 			<label>Status Update Interval: <input type="number" v-model="updateIntervalTime" style="width:6em"></input>ms</label>
 			<button @click="statusUpdate">get status now</button>
+			<br>
+			<label>Status:</label>
+			<pre class="raw">{{spark}}</pre>
 		</fieldset>
 
 	</div>
@@ -199,12 +205,6 @@
 								return "updating";			
 						}
 
-					},
-					estimatedTotalTime() {
-						if ( this.spark.estimatedTotalTime > 0 )
-							return this.spark.estimatedTotalTime;
-						else
-							return 0;
 					},
 					remainingTime() {
 						var remaining = this.spark.estimatedTotalTime - this.spark.printTime;
@@ -286,10 +286,11 @@
 					requestStatus() { fetch(this.url + "requestStatus"); }
 				},
 				filters: {
-					time: function (value) {
-						if ( value > 0 ) {
-							var h = Math.floor(value / 60);
-							var m = value % 60;
+					time: function (sec) {
+						if ( sec > 0 ) {
+							var m = Math.round(sec / 60);
+							var h = Math.floor(m / 60);
+							var m = m % 60;
 							return h + "h " + m + "m";
 						} else {
 							return "---"

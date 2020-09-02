@@ -215,6 +215,13 @@ static void notifyCallback(BLERemoteCharacteristic *characteristic, uint8_t *dat
 	if (strcmp(buffer, "printing_sts") == 0)
 	{
 		Serial.println("PRINTING");
+		if ( SparkMaker::printer.status != PRINTING )
+		{
+			SparkMaker::printer.startTime = millis() / 1000;
+			SparkMaker::printer.finishTime = 0;
+			SparkMaker::printer.currentLayer = 0;
+			SparkMaker::printer.totalLayers = 0;
+		}
 		SparkMaker::printer.status = PRINTING;
 		return;
 	}
@@ -614,11 +621,13 @@ void SparkMaker::print(const String &filename)
 			delay(100);
 
 		}
+		SparkMaker::printer.startTime = 0;
+		SparkMaker::printer.finishTime = 0;
+		SparkMaker::printer.currentLayer = 0;
+		SparkMaker::printer.totalLayers = 0;
 
 		Serial.println("start printing");
 		txCharacteristic->writeValue("Start Printing;");
-		SparkMaker::printer.startTime = millis() / 1000;
-		SparkMaker::printer.finishTime = 0;
 	}
 }
 

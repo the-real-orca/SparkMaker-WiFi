@@ -87,10 +87,5 @@ bool saveConfig(const DynamicJsonDocument &config, const String &filename)
 		return false;
 	}
 
-	// TODO remove debug output
-	Serial.print("JSON save: ");
-	serializeJsonPretty(config, Serial);
-	Serial.println();
-
 	return true;
 }

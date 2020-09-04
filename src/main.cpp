@@ -45,7 +45,6 @@ void handleStatus()
 	String content;
 	serializeJsonPretty(tempJson, content);
 	captivePortal.sendFinal(200, "application/json", content);
-// TODO	Serial.println(content);
 }
 
 void handleCmdDisconnect()
@@ -115,11 +114,3 @@ void loop()
 	spark.loop();
 }
 
-/* FIXME
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
-  btStop();
-  adc_power_off();
-  //esp_wifi_stop(); // Doesn't work for me!
-  esp_bt_controller_disable();
-  */

@@ -10,6 +10,7 @@
 	},
 	"Credentials": {
 		"ssid": "pwd",
+		"AP_name": "123456",
 		"openNet": ""
 	},
 	"SparkMaker": {

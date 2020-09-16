@@ -32,12 +32,17 @@ DynamicJsonDocument tempJson(tempJsonSize);
 const static struct
 {
 	uint16_t wifiClientConnectionTimeout = 5;
+	uint16_t portalTimeout = 120;
 	uint8_t softAP_IP[4] = {192, 168, 4, 1};
 	uint8_t subnet[4] = {255, 255, 255, 0};
 	String hostname = "ESP-" + String(ESP_getChipId());
 	String portalPath = "portal.html";
 } defaultConfig;
-static uint16_t wifiClientConnectionTimeout;
+// parameters
+static bool _portalActive = false;
+static uint16_t _portalTimeout;
+static uint16_t _portalStarted;
+static uint16_t _wifiClientConnectionTimeout;
 
 /**
  * sanity check for strings
@@ -55,7 +60,7 @@ String sanity(const String _str)
 /**
  * start captive portal AP
  */
-void startCaptiveAP()
+void startCaptivePortal()
 {
 	Serial.print("Start WiFi AP: " + config["hostname"].as<String>() + " ... ");
 	WiFi.softAPdisconnect(true);
@@ -70,6 +75,8 @@ void startCaptiveAP()
 	// create WiFi AP
 	WiFi.softAPConfig(softAP_IP, softAP_IP, subnet);
 	WiFi.softAP(config["hostname"]);
+	_portalActive = true;
+	_portalStarted = millis()/1000;
 	Serial.println("OK");
 
 	// redirecting all the domains to the ESP
@@ -78,13 +85,32 @@ void startCaptiveAP()
 	_dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
 	_dnsServerActive = true;
 	Serial.println("OK");
+
 }
+
+/**
+ * stop captive portal AP
+ */
+void stopCaptivePortal()
+{
+	Serial.print("Stop WiFi AP: " + config["hostname"].as<String>() + " ... ");
+	WiFi.softAPdisconnect(true);
+
+	// redirecting all the domains to the ESP
+	_dnsServer.stop();
+	_dnsServerActive = false;
+
+	// switch to station only mode
+	WiFi.mode(WIFI_MODE_STA);
+	_portalActive = false;
+}
+
 
 /**
  * connect as WiFi Client
  * use strongest available network in known credentials list
  */
-void connectWiFiClient()
+void findAndConnectWifiNetwork()
 {
 	// scan for networks and connect to strongest one we have credentials
 	WiFi.disconnect();
@@ -111,7 +137,7 @@ void connectWiFiClient()
 
 			WiFi.begin(ssid.c_str(), pwd.c_str());
 			// wait for connection
-			for (int16_t i = wifiClientConnectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
+			for (int16_t i = _wifiClientConnectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
 			{
 				delay(100);
 			}
@@ -130,7 +156,7 @@ void connectWiFiClient()
  * connect as WiFi Client
  * try given credentials, use strongest available network in known credentials list as fallback
  */
-void connectWiFiClient(String ssid, String pwd)
+void connectWifiNetwork(String ssid, String pwd)
 {
 	WiFi.disconnect();
 	Serial.print("Connect to ");
@@ -138,7 +164,7 @@ void connectWiFiClient(String ssid, String pwd)
 	Serial.print(" ... ");
 	WiFi.begin(ssid.c_str(), pwd.c_str());
 	// wait for connection
-	for (int16_t i = wifiClientConnectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
+	for (int16_t i = _wifiClientConnectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
 	{
 		delay(100);
 	}
@@ -150,7 +176,7 @@ void connectWiFiClient(String ssid, String pwd)
 		Serial.println("Failed");
 
 		// fallback to known networks
-		connectWiFiClient();
+		findAndConnectWifiNetwork();
 	}
 }
 
@@ -434,7 +460,7 @@ static void handleWifiAdd()
 	if (ssid != WiFi.SSID())
 	{
 		delay(100);
-		connectWiFiClient(ssid, pwd);
+		connectWifiNetwork(ssid, pwd);
 	}
 }
 
@@ -460,7 +486,7 @@ static void handleWifiDel()
 	if (reconnect)
 	{
 		delay(100);
-		connectWiFiClient();
+		findAndConnectWifiNetwork();
 	}
 }
 
@@ -484,9 +510,10 @@ static void handleUpdateHostname()
 	handleInfo();
 
 	// re-start AP
-	startCaptiveAP();
+	startCaptivePortal();
 }
 
+// FIXME remove listDir() Debug only!!!
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 {
 	Serial.printf("Listing directory: %s\r\n", dirname);
@@ -529,9 +556,8 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 void CaptivePortal::setup()
 {
 	// file system
-// FIX number of files limited	
-	SPIFFS.begin(true, "", 10); // format filesystem if failed
-	listDir(SPIFFS, "/", 0);
+	SPIFFS.begin(true, "", 10); // format filesystem if failed, set file handler to 10 files max.
+//TODO	listDir(SPIFFS, "/", 0);
 
 	// load config
 	loadConfig(config);
@@ -540,20 +566,28 @@ void CaptivePortal::setup()
 	// sanity check for config
 	if (!config["hostname"])
 		config["hostname"] = defaultConfig.hostname;
-	wifiClientConnectionTimeout = config["CaptivePortal"]["wifiClientConnectionTimeout"] | defaultConfig.wifiClientConnectionTimeout;
+	_wifiClientConnectionTimeout = config["CaptivePortal"]["wifiClientConnectionTimeout"] | defaultConfig.wifiClientConnectionTimeout;
+	_portalTimeout = config["CaptivePortal"]["portalTimeout"] | defaultConfig.portalTimeout;
 
 	// init WiFi
-// TODO station only	WiFi.mode(WIFI_MODE_APSTA);
-	WiFi.mode(WIFI_MODE_STA);
 	WiFi.setAutoReconnect(false);
 	WiFi.persistent(false);
 	WiFi.setHostname(config["hostname"]);
 
-	// start AP
-// TODO startCaptiveAP();
+	if ( config["CaptivePortal"]["wifiClientConnectionTimeout"].as<bool>() )
+	{
+Serial.println("start AP and Captive Portal");		
+		// start AP and Captive Portal
+		WiFi.mode(WIFI_MODE_APSTA);
+		startCaptivePortal();
+	} else {
+Serial.println("Captive Portal is disabled");		
+		// Captive Portal is disabled
+		WiFi.mode(WIFI_MODE_STA);
+	}
 
 	// connect as WiFi Client
-	connectWiFiClient();
+	findAndConnectWifiNetwork();
 
 	Serial.print("IP Address: ");
 	Serial.print(WiFi.softAPIP());
@@ -601,6 +635,18 @@ void CaptivePortal::loop()
 	//DNS
 	if ( _dnsServerActive )
 		_dnsServer.processNextRequest();
+
+	// Portal
+	if ( _portalActive )
+	{
+		uint16_t time = millis() / 1000 - _portalStarted;
+		if ( time > _portalTimeout )
+		{
+			// stop Captive Portal
+			// 
+			stopCaptivePortal();
+		}
+	}
 
 	//HTTP
 	_httpServer.handleClient();

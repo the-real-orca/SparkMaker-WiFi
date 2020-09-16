@@ -13,7 +13,6 @@ static inline uint32_t ESP_getChipId() { return ESP.getChipId(); }
 static inline uint32_t ESP_getChipId() { return (uint32_t)ESP.getEfuseMac(); }
 #endif
 
-#include <SPIFFS.h>
 
 // DNS _httpServer
 static const byte DNS_PORT = 53;
@@ -74,7 +73,7 @@ void startCaptivePortal()
 
 	// create WiFi AP
 	WiFi.softAPConfig(softAP_IP, softAP_IP, subnet);
-	WiFi.softAP(config["hostname"]);
+	WiFi.softAP(config["hostname"].as<const char*>());
 	_portalActive = true;
 	_portalStarted = millis()/1000;
 	Serial.println("OK");
@@ -103,6 +102,7 @@ void stopCaptivePortal()
 	// switch to station only mode
 	WiFi.mode(WIFI_MODE_STA);
 	_portalActive = false;
+	Serial.println("OK");
 }
 
 
@@ -289,6 +289,7 @@ static bool handleFile(String path)
 
 		// send file
 		_httpServer.sendHeader("Cache-Control", "public, max-age=36000"); // enable cache
+		_httpServer.sendHeader("Access-Control-Allow-Origin", "*"); // allow CORS
 		File file = SPIFFS.open(path, "r");
 		_httpServer.streamFile(file, contentType);
 		_httpServer.client().setNoDelay(true);
@@ -327,7 +328,6 @@ static void handleGenericHTTP()
 	Serial.println(_httpServer.uri());
 
 	// HTML Header
-
 	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.sendHeader("Pragma", "no-cache");
 	_httpServer.sendHeader("Expires", "-1");
@@ -361,6 +361,7 @@ static void handleInfo()
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
+	_httpServer.sendHeader("Access-Control-Allow-Origin", "*"); // allow CORS
 	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(200, "application/json", content);
 	_httpServer.client().stop();
@@ -432,6 +433,7 @@ static void handleWifiScan()
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
+	_httpServer.sendHeader("Access-Control-Allow-Origin", "*"); // allow CORS
 	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(200, "application/json", content);
 	_httpServer.client().stop();
@@ -452,6 +454,7 @@ static void handleWifiAdd()
 	saveConfig(config);
 
 	// send reply
+	_httpServer.sendHeader("Access-Control-Allow-Origin", "*"); // allow CORS
 	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(200, "application/json", "{\"status\": \"OK\"}");
 	_httpServer.client().stop();
@@ -478,6 +481,7 @@ static void handleWifiDel()
 	saveConfig(config);
 
 	// send reply
+	_httpServer.sendHeader("Access-Control-Allow-Origin", "*"); // allow CORS
 	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(200, "application/json", "{\"status\": \"OK\"}");
 	_httpServer.client().stop();
@@ -514,6 +518,7 @@ static void handleUpdateHostname()
 }
 
 // FIXME remove listDir() Debug only!!!
+/*
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 {
 	Serial.printf("Listing directory: %s\r\n", dirname);
@@ -552,12 +557,19 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 		file = root.openNextFile();
 	}
 }
+*/
 
 void CaptivePortal::setup()
 {
 	// file system
-	SPIFFS.begin(true, "", 10); // format filesystem if failed, set file handler to 10 files max.
-//TODO	listDir(SPIFFS, "/", 0);
+	if ( !SPIFFS.begin() )
+	{
+		// format filesystem if failed
+		SPIFFS.format();
+		SPIFFS.begin();
+	}
+
+//FIXME	listDir(SPIFFS, "/", 0);
 
 	// load config
 	loadConfig(config);
@@ -572,17 +584,15 @@ void CaptivePortal::setup()
 	// init WiFi
 	WiFi.setAutoReconnect(false);
 	WiFi.persistent(false);
-	WiFi.setHostname(config["hostname"]);
 
 	if ( config["CaptivePortal"]["wifiClientConnectionTimeout"].as<bool>() )
 	{
-Serial.println("start AP and Captive Portal");		
 		// start AP and Captive Portal
 		WiFi.mode(WIFI_MODE_APSTA);
 		startCaptivePortal();
 	} else {
-Serial.println("Captive Portal is disabled");		
 		// Captive Portal is disabled
+		Serial.println("Captive Portal is disabled");		
 		WiFi.mode(WIFI_MODE_STA);
 	}
 
@@ -596,7 +606,7 @@ Serial.println("Captive Portal is disabled");
 
 	// enable mDNS
 	Serial.print("Start mDNS ... ");
-	if (MDNS.begin(config["hostname"]))
+	if (MDNS.begin(config["hostname"].as<const char*>()))
 	{
 		MDNS.addService("http", "tcp", 80);
 		Serial.println("OK");
@@ -608,7 +618,6 @@ Serial.println("Captive Portal is disabled");
 
 	// setup HTTP server
 	Serial.print("Start WebServer ... ");
-	_httpServer.enableCrossOrigin();
 
 	_httpServer.on("/c/info", handleInfo);				 // send status info
 	_httpServer.on("/c/hostname", handleUpdateHostname); // update
@@ -677,12 +686,14 @@ void CaptivePortal::sendHeader(const String &name, const String &value, bool fir
 }
 void CaptivePortal::sendFinal(int code, char *content_type, const String &content)
 {
+	_httpServer.sendHeader("Access-Control-Allow-Origin", "*"); // allow CORS
 	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(code, content_type, content);
 	_httpServer.client().stop();
 }
 void CaptivePortal::sendFinal(int code, const String &content_type, const String &content)
 {
+	_httpServer.sendHeader("Access-Control-Allow-Origin", "*"); // allow CORS
 	_httpServer.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");	// disable cache
 	_httpServer.send(code, content_type, content);
 	_httpServer.client().stop();

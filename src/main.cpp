@@ -8,6 +8,7 @@
 CaptivePortal captivePortal;
 
 // SparkMaker
+/* TODO
 #include "SparkMaker.h"
 SparkMaker spark;
 
@@ -40,7 +41,7 @@ void handleStatus()
 	{
 		files.add(file.first);
 	}
-	
+
 	// send json data
 	String content;
 	serializeJsonPretty(tempJson, content);
@@ -73,7 +74,7 @@ void handleCmdMove()
 		spark.move(pos);
 	captivePortal.sendFinal(200, "text/plain", "OK");
 }
-
+*/
 
 void setup()
 {
@@ -84,12 +85,13 @@ void setup()
 	}
 	Serial.println("\nSparkMaker BLE to WiFi interface");
 
-	spark.setup();
+// TODO	spark.setup();
 
 	captivePortal.setup();
 
 	// custom pages
 
+/* TODO
 	captivePortal.on("/status", handleStatus);
 	captivePortal.on("/print", handleCmdPrint);
 
@@ -102,7 +104,7 @@ void setup()
 	captivePortal.on("/move", handleCmdMove);
 	captivePortal.on("/connect", handleCmdConnect);
 	captivePortal.on("/disconnect", handleCmdDisconnect);
-
+*/
 	captivePortal.begin();
 
 	Serial.println("Sparkmaker WiFi started!");
@@ -111,6 +113,6 @@ void setup()
 void loop()
 {
 	captivePortal.loop();
-	spark.loop();
+// TODO	spark.loop();
 }
 

@@ -1,7 +1,15 @@
 // file system
 // http://www.instructables.com/id/Using-ESP8266-SPIFFS/
 #include <Arduino.h>
-#include <SPIFFS.h>
+#ifdef ESP32
+	#include <SPIFFS.h>	
+#endif
+#ifdef ESP8266
+	#include <FS.h> 	
+	#define FILE_READ "r"
+	#define FILE_WRITE "w"
+#endif
+
 #include "config.h"
 
 const JsonObject JsonObjectNull;

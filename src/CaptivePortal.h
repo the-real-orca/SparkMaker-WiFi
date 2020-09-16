@@ -5,9 +5,27 @@
 #define _CAPTIVEPORTAL_h
 
 #include <Arduino.h>
-#include <WiFi.h>
-#include <WebServer.h>
-#include <ESPmDNS.h>
+#ifdef ESP32
+	#include <WiFi.h>
+	#include <WebServer.h>
+	#include <ESPmDNS.h>
+	#include <SPIFFS.h>	
+#endif
+#ifdef ESP8266
+	#include <ESP8266WiFi.h>
+	#define WIFI_MODE_OFF WIFI_OFF
+	#define WIFI_MODE_STA WIFI_STA
+	#define WIFI_MODE_AP WIFI_AP
+	#define WIFI_MODE_APSTA WIFI_AP_STA
+	#define WIFI_AUTH_OPEN ENC_TYPE_NONE
+
+	#include <ESP8266WebServer.h>
+	typedef ESP8266WebServer WebServer;
+
+	#include <ESP8266mDNS.h>
+	#include <FS.h>
+#endif
+
 #include <DNSServer.h>
 #include <ArduinoJson.h>
 

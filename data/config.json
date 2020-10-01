@@ -2,7 +2,7 @@
 	"hostname": "SparkMaker",
 	"CaptivePortal": {
 		"enabled": true,
-		"portalTimeout": 120,
+		"portalTimeout": 180,
 		"ip": "192.168.4.1",
 		"subnet": "255.255.255.0",
 		"path": "portal.html",
@@ -10,7 +10,6 @@
 	},
 	"Credentials": {
 		"ssid": "pwd",
-		"AP_name": "123456",
 		"openNet": ""
 	},
 	"SparkMaker": {

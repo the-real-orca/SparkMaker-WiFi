@@ -31,7 +31,7 @@ DynamicJsonDocument tempJson(tempJsonSize);
 const static struct
 {
 	uint16_t wifiClientConnectionTimeout = 5;
-	uint16_t portalTimeout = 120;
+	uint16_t portalTimeout = 300;
 	uint8_t softAP_IP[4] = {192, 168, 4, 1};
 	uint8_t subnet[4] = {255, 255, 255, 0};
 	String hostname = "ESP-" + String(ESP_getChipId());
@@ -116,20 +116,37 @@ void findAndConnectWifiNetwork()
 	WiFi.disconnect();
 	WiFi.scanDelete();
 	int n = WiFi.scanNetworks(false, false);
+	std::vector<int> order(n);
+	int i, j; 
 
-	// list networks
-	for (int j = 0; j < n; j++)
+	// init order list
+	for (j = 0; j < n; j++)
+		order[j] = j;
+	// sort networks (bubble sort)
+	for (i = 0; i < n-1; i++)       
 	{
-		Serial.print("SSID "); Serial.print( WiFi.SSID(j) );
-		Serial.print(" RSSI "); Serial.println( WiFi.RSSI(j) );
+		// last i elements are already in place    
+		for (j = 0; j < n-i-1; j++) 
+		{
+			if ( WiFi.RSSI( order[j] ) < WiFi.RSSI( order[j+1] ) )
+			{
+				// swap
+				int tmp = order[j];
+				order[j] = order[j+1]; 
+				order[j+1] = tmp;
+			}
+		}
 	}
 
 	// connect to first known network
 	bool connected = false;
-	for (int j = 0; j < n && !connected; j++)
+	for (j = 0; j < n && !connected; j++)
 	{
-		String ssid = WiFi.SSID(j);
-		Serial.print("Found Network: "); Serial.println(ssid);
+		String ssid = WiFi.SSID(order[j]);
+		int32_t rssi = WiFi.RSSI(order[j]);
+		// list networks
+		Serial.print("Found Network: "); Serial.print(ssid);
+		Serial.print(" ("); Serial.print( rssi ); Serial.println(")");
 		if (config["Credentials"].containsKey(ssid))
 		{
 			String pwd = config["Credentials"][ssid];
@@ -137,14 +154,15 @@ void findAndConnectWifiNetwork()
 
 			WiFi.begin(ssid.c_str(), pwd.c_str());
 			// wait for connection
-			for (int16_t i = _wifiClientConnectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
+			for (i = _wifiClientConnectionTimeout * 10; (i > 0) && (WiFi.status() != WL_CONNECTED); i--)
 			{
 				delay(100);
 			}
 			if (WiFi.status() == WL_CONNECTED)
 			{
 				connected = true;
-				Serial.println("OK");
+				Serial.print("OK ("); Serial.print(WiFi.localIP()); Serial.println(")");
+
 			}
 			else
 				Serial.println("Failed");
@@ -309,7 +327,7 @@ static bool handleFile(String path)
  */
 static void handleGenericHTTP()
 {
-	Serial.print("handleGenericHTTP ");Serial.println(_httpServer.uri());
+	Serial.print("handleGenericHTTP: ");Serial.println(_httpServer.uri());
 
 	// test for captive portal request
 	if (isCaptiveRequest())
@@ -517,48 +535,6 @@ static void handleUpdateHostname()
 	startCaptivePortal();
 }
 
-// FIXME remove listDir() Debug only!!!
-/*
-void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
-{
-	Serial.printf("Listing directory: %s\r\n", dirname);
-
-	File root = fs.open(dirname);
-	if (!root)
-	{
-		Serial.println("- failed to open directory");
-		return;
-	}
-	if (!root.isDirectory())
-	{
-		Serial.println(" - not a directory");
-		return;
-	}
-
-	File file = root.openNextFile();
-	while (file)
-	{
-		if (file.isDirectory())
-		{
-			Serial.print("  DIR : ");
-			Serial.println(file.name());
-			if (levels)
-			{
-				listDir(fs, file.name(), levels - 1);
-			}
-		}
-		else
-		{
-			Serial.print("  FILE: ");
-			Serial.print(file.name());
-			Serial.print("\tSIZE: ");
-			Serial.println(file.size());
-		}
-		file = root.openNextFile();
-	}
-}
-*/
-
 void CaptivePortal::setup()
 {
 	// file system
@@ -568,8 +544,6 @@ void CaptivePortal::setup()
 		SPIFFS.format();
 		SPIFFS.begin();
 	}
-
-//FIXME	listDir(SPIFFS, "/", 0);
 
 	// load config
 	loadConfig(config);
@@ -596,13 +570,11 @@ void CaptivePortal::setup()
 		WiFi.mode(WIFI_MODE_STA);
 	}
 
+	Serial.print("AP IP Address: ");
+	Serial.println(WiFi.softAPIP());
+
 	// connect as WiFi Client
 	findAndConnectWifiNetwork();
-
-	Serial.print("IP Address: ");
-	Serial.print(WiFi.softAPIP());
-	Serial.print(", ");
-	Serial.println(WiFi.localIP());
 
 	// enable mDNS
 	Serial.print("Start mDNS ... ");

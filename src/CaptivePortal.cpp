@@ -161,8 +161,8 @@ void findAndConnectWifiNetwork()
 			if (WiFi.status() == WL_CONNECTED)
 			{
 				connected = true;
-				Serial.print("OK ("); Serial.print(WiFi.localIP()); Serial.println(")");
-
+				Serial.println("OK");
+				Serial.print("Client IP Address: "); Serial.println(WiFi.softAPIP());
 			}
 			else
 				Serial.println("Failed");
@@ -188,7 +188,10 @@ void connectWifiNetwork(String ssid, String pwd)
 	}
 
 	if (WiFi.status() == WL_CONNECTED)
+	{
 		Serial.println("OK");
+		Serial.print("Client IP Address: "); Serial.println(WiFi.softAPIP());
+	}
 	else
 	{
 		Serial.println("Failed");

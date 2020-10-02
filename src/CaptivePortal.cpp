@@ -146,11 +146,11 @@ void findAndConnectWifiNetwork()
 		int32_t rssi = WiFi.RSSI(order[j]);
 		// list networks
 		Serial.print("Found Network: "); Serial.print(ssid);
-		Serial.print(" ("); Serial.print( rssi ); Serial.println(")");
+		Serial.print(" ("); Serial.print( rssi ); Serial.print(")");
 		if (config["Credentials"].containsKey(ssid))
 		{
 			String pwd = config["Credentials"][ssid];
-			Serial.print("Connect to "); Serial.print(ssid); Serial.print(" ... ");
+			Serial.print(" connecting ... ");
 
 			WiFi.begin(ssid.c_str(), pwd.c_str());
 			// wait for connection
@@ -162,11 +162,16 @@ void findAndConnectWifiNetwork()
 			{
 				connected = true;
 				Serial.println("OK");
-				Serial.print("Client IP Address: "); Serial.println(WiFi.softAPIP());
+				Serial.print("Client IP Address: "); Serial.println(WiFi.localIP());
 			}
 			else
 				Serial.println("Failed");
 		}
+		else
+		{
+			Serial.println(" unknown");
+		}
+		
 	}
 }
 
@@ -190,7 +195,7 @@ void connectWifiNetwork(String ssid, String pwd)
 	if (WiFi.status() == WL_CONNECTED)
 	{
 		Serial.println("OK");
-		Serial.print("Client IP Address: "); Serial.println(WiFi.softAPIP());
+		Serial.print("Client IP Address: "); Serial.println(WiFi.localIP());
 	}
 	else
 	{

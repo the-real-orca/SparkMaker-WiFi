@@ -1,6 +1,7 @@
 body {
     margin: 3em auto;
     width: 30em;
+    max-width: 95%;
     font-family: Arial, sans-serif;
     position: relative;
     cursor: default;
@@ -92,6 +93,12 @@ h2 {
     background: lightgreen !important;
 }
 
+.connectedIcon {
+    display: inline-block;
+    position: absolute;
+    left:1em;    
+}
+
 .rssi {
     font-weight: normal;
     font-size: 75%;
@@ -102,8 +109,6 @@ h2 {
 
 .bookmark {
     display: inline-block;
-    position: absolute;
-    left:1em;    
 }
 
 .del {
@@ -124,10 +129,8 @@ h2 {
     position: absolute;
     color: gray;
     font-weight: bold;
-    right: 1em;
-    padding: 0.1em;
-    width: 2em;
-    text-align: center;
+    right: 0em;
+    top: 0em;
     font-size: 175%;    
     cursor: pointer;
 }
@@ -135,15 +138,21 @@ h2 {
 label {
     display: inline-block;
     font-style: italic;
-    width: 6em;
+    width: 5em;
     margin: 0.5em;
+}
+.input {
+    display: inline-block;
+    width: 65%;
+    margin: 0.3em 0em;
+    position: relative;
 }
 input {
     display: inline-block;
-    font-size: 120%;
-    margin: 0.3em 0.5em;
+    font-size: 110%;
     padding: 0.3em;
-    width: 16em;
+    margin: 0em;
+    width: 100%;
 }
 button {
     border-radius: 0.3em;

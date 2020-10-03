@@ -1,0 +1,19 @@
+[
+  {
+    "ssid": "test",
+    "rssi": -40,
+    "encrypted": true,
+    "connected": true,
+    "known": true
+  },
+  {
+    "ssid": "ssid",
+    "encrypted": true,
+    "known": true
+  },
+  {
+    "ssid": "openNet",
+    "encrypted": false,
+    "known": true
+  }
+]

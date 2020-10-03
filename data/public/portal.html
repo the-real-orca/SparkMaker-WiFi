@@ -15,10 +15,11 @@
 		<h2>WiFi Networks</h2>
 		<div v-for="ap in availableNetworks">
 			<div class="network available" :class="{known: ap.known, connected: ap.connected}" @click="selectNetwork(ap)">
-				<div class="bookmark" v-if="ap.known">&starf;</div>
+				<div class="connectedIcon" v-if="ap.connected">&#x1F5F2;</div>
 				<span class="ssid">{{ap.ssid}}</span>
 				<span class="encryption" v-if="ap.encrypted">&#x1F512;</span>
 				<span class="rssi">{{ap.rssi}}</span>
+				<div class="bookmark" v-if="ap.known">&starf;</div>
 				<div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
 			</div>
 		</div>
@@ -27,9 +28,9 @@
 		</span>
 		<div v-for="ap in knownNetworks" @click="selectNetwork(ap)">
 			<div class="network known">
-				<div class="bookmark" v-if="ap.known">&starf;</div>
 				<span class="ssid">{{ap.ssid}}</span>
 				<span class="encryption" v-if="ap.encrypted">&#x1F512;</span>
+				<div class="bookmark" v-if="ap.known">&starf;</div>
 				<div class="del" v-if="ap.known" @click.stop="deleteNetwork(ap)">X</div>
 			</div>
 		</div>
@@ -39,12 +40,16 @@
 		<form @submit.prevent="addNetwork">
 			<div>
 				<label>SSID:</label>
-				<input id="ssid" type="text" name="ssid" autocomplete="on" v-model="form.ssid">
+				<span class="input">
+					<input id="ssid" type="text" name="ssid" autocomplete="on" v-model="form.ssid">
+				</span>
 			</div>
 			<div>
 				<label>Password:</label>
-				<input id="pwd" :type="form.showPwd ? 'text' : 'password'" name="pwd" autocomplete="on" v-model="form.pwd">
-				<div class="showPwd" @click.stop="form.showPwd = !form.showPwd">&#x1f441;</div>
+				<span class="input">
+					<input id="pwd" :type="form.showPwd ? 'text' : 'password'" name="pwd" autocomplete="on" v-model="form.pwd">
+					<div class="showPwd" @click.stop="form.showPwd = !form.showPwd">&#x1f441;</div>
+				</span>
 			</div>
 			<button :disabled="!form.ssid">Connect</button>
 		</form>

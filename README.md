@@ -5,6 +5,8 @@ Web application for SparkMaker FHD 3D printer.
 
 Use a ESP32 to connect to the Bluetooth interface of the SparkMaker FHD and provide a nice Web application to remotely manage and monitor your prints.
 
+![Web application screenshot](WebApp.png)
+
 Features
 --------
 - Captive Portal for easy WiFi configuration

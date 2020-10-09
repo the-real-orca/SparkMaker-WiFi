@@ -88,6 +88,10 @@ h2 {
 	color: #f0f0f0;
 }
 
+div, fieldset {
+	position: relative;
+}
+
 .center {
 	text-align: center;
 }
@@ -277,10 +281,22 @@ fieldset {
 
 .debug {
 	display: block;
+	text-align: left;
+}
+
+.debugBtn {
+	position: absolute;
+	right: 0em;
+	bottom: 0em;
+	padding: 0.2em;
+	background-color: #E0E0E0;
+	border: 1px solid #D0D0D0;
+	border-radius: 0.3em;
+}
+
+.debug fieldset {
 	border: 1px solid rgba(0, 0, 0, 0.2);
 	background-color: #E0E0E0;
-	text-align: left;
-	margin: auto;
 }
 
 .raw {

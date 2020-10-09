@@ -133,18 +133,21 @@
 					<button @click="start" class="primary" :disabled="!printable">Print</button>
 				</div>
 			</div>
+			<span class="debugBtn" @click="debugMode = !debugMode">{.}</span>
 		</fieldset>
 
-		<fieldset class="debug">
-			<legend>Debug</legend>
-			<label>URL: <input type="text" v-model="url" style="width:16em"></input></label>
-			<br/>
-			<label>Status Update Interval: <input type="number" v-model="updateIntervalTime" style="width:6em"></input>ms</label>
-			<button @click="statusUpdate">get status now</button>
-			<br>
-			<label>Status:</label>
-			<pre class="raw">{{spark}}</pre>
-		</fieldset>
+		<div class="debug">
+			<fieldset class="debug" v-if="debugMode" >
+				<h3>Debug</h3>
+				<label>URL: <input type="text" v-model="url" style="width:16em"></input></label>
+				<br/>
+				<label>Status Update Interval: <input type="number" v-model="updateIntervalTime" style="width:6em"></input>ms</label>
+				<button @click="statusUpdate">get status now</button>
+				<br>
+				<label>Status:</label>
+				<pre class="raw">{{spark}}</pre>
+			</fieldset>
+		</div>
 
 	</div>
 
@@ -171,6 +174,7 @@
 					selectedFile: "",
 					waitStatusChange: true,
 					mounted: false,
+					debugMode: false,
 					updateIntervalTime: 2500,
 					intervalHandler: null
 				},

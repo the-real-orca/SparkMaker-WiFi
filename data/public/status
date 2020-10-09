@@ -1,0 +1,19 @@
+{
+  "status": "PRINTING",
+  "uptime": 327,
+  "currentLayer": 1,
+  "totalLayers": 480,
+  "currentFile": "rook_tower_Nova_Stan.fhd",
+  "printTime": 207,
+  "estimatedTotalTime": 0,
+  "fileList": [
+    "ValidationMatrix_10.fhd",
+    "ValidationMatrix_14.fhd",
+    "ValidationMatrix_15.fhd",
+    "ValidationMatrix_16.fhd",
+    "cube_XYZ_Nova_Stan.fhd",
+    "print.fhd",
+    "rook_tower_Nova_Stan.fhd",
+    "steps Nova Stan.fhd"
+  ]
+}
